@@ -25,12 +25,12 @@ export default function DashboardDisplayControls() {
         filterKey="displayCol"
         infoText="Field testing results can be based on the change in weight of a product, or the surface area before and after testing. The results by mass provided here are a combination of wet and dry weights. Future versions of the dashboard will further divide these data sets."
       />
-      {/* <RadioSingleSelect
+      <RadioSingleSelect
         options={{ Final: "Final", Midpoint: "Midpoint" }}
         title="Select Point of Analysis"
         filterKey="timepoint"
         infoText="Some trials analyzed residuals at a midpoint, around 45 days, before the full composting cycle is complete. Select ‘midpoint’ to view this subset of the data."
-      /> */}
+      />
       <RadioSingleSelect
         options={material2col}
         title="Select X-Axis Display"
