@@ -15,8 +15,8 @@ def get_trial_to_id_map():
     """
     facility_df = pd.read_excel(DATA_SHEET_PATHS.get("OPERATING_CONDITIONS_PATH"), sheet_name=1, skiprows=1)
     for _, row in facility_df.iterrows():
-        if row["Public Trial ID"] not in TRIAL_TO_ID_MAP:
-            TRIAL_TO_ID_MAP[row["Public Trial ID"]] = row["Trial Facility Name"]
+        if row["Trial Facility Name"] not in TRIAL_TO_ID_MAP:
+            TRIAL_TO_ID_MAP[row["Trial Facility Name"]] = row["Public Trial ID"]
     return TRIAL_TO_ID_MAP
 
 
