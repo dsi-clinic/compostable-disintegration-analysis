@@ -5,8 +5,8 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
-from constants import TRIAL_COLS, TRIAL_TO_ID_MAP
-from utils import DefaultDataFrames
+from constants import TRIAL_COLS
+from utils import DefaultDataFrames, get_trial_to_id_map
 
 
 class AbstractDataPipeline(ABC):
@@ -134,6 +134,8 @@ class AbstractDataPipeline(ABC):
         Returns:
             Data merged with trial information.
         """
+        if "Trial ID" not in data.columns:
+            raise ValueError(f"Trial ID column not found in data: {data.columns}, expected 'Trial ID'.\n {self.data_filepath}")
         return data.merge(
             self.trials, left_on="Trial ID", right_on="Public Trial ID"
         )
@@ -184,7 +186,12 @@ class NewTemplatePipeline(AbstractDataPipeline):
         # Read the CSV file into a DataFrame
         # With fix utf-8 encoding issue
         # TODO: Change to Excel
-        data = pd.read_csv(data_filepath, encoding="ISO-8859-1")
+        if data_filepath.suffix == ".csv":
+            data = pd.read_csv(data_filepath)
+        elif data_filepath.suffix == ".xlsx" or data_filepath.suffix == ".xls":
+            data = pd.read_excel(data_filepath)
+        else:
+            raise ValueError(f"Unsupported file type: {data_filepath.suffix}")
 
         # Find the index of the first completely empty row — formatted
         # so there's comments below the data
@@ -193,7 +200,6 @@ class NewTemplatePipeline(AbstractDataPipeline):
         # If an empty row is found, drop all rows below it
         if pd.notna(first_empty_row_index):
             data = data[:first_empty_row_index]
-
         return data
 
     def preprocess_data(self, data):
@@ -420,7 +426,7 @@ class ClosedLoopPipeline(AbstractDataPipeline):
         weight_melted = self.melt_trial(df_weight, "% Residuals (Mass)")
 
         df_area = pd.read_excel(data_filepath, sheet_name=4, skiprows=2)
-        df_area["Trial ID"] = df_area["Facility Name"].map(TRIAL_TO_ID_MAP)
+        df_area["Trial ID"] = df_area["Facility Name"].map(get_trial_to_id_map())
         area_melted = self.melt_trial(df_area, "% Residuals (Area)")
 
         return weight_melted.merge(

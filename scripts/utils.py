@@ -9,6 +9,17 @@ import pandas as pd
 from constants import DATA_SHEET_PATHS, ID_TO_TECHNOLOGY_MAP, TRIAL_TO_ID_MAP
 
 
+def get_trial_to_id_map():
+    """
+    Returns a dictionary of trial IDs to map.
+    """
+    facility_df = pd.read_excel(DATA_SHEET_PATHS.get("OPERATING_CONDITIONS_PATH"), sheet_name=1, skiprows=1)
+    for _, row in facility_df.iterrows():
+        if row["Public Trial ID"] not in TRIAL_TO_ID_MAP:
+            TRIAL_TO_ID_MAP[row["Public Trial ID"]] = row["Trial Facility Name"]
+    return TRIAL_TO_ID_MAP
+
+
 def anonymize_brand(brand: str, brand_mapping: dict):
     """Anonymizes brand names by mapping them to a generic brand.
         Sorry for the global variable.
@@ -144,11 +155,12 @@ class DefaultDataFrames:
             skiprows=1,
             index_col="Time Step",
         )
+        trial_to_id_map = get_trial_to_id_map()
         df_temps = df_temps[
-            [col for col in df_temps.columns if col in TRIAL_TO_ID_MAP]
+            [col for col in df_temps.columns if col in trial_to_id_map]
         ]
         df_temps.columns = [
-            TRIAL_TO_ID_MAP[col.replace("*", "")] for col in df_temps.columns
+            trial_to_id_map[col.replace("*", "")] for col in df_temps.columns
         ]
         # ONLY USE THE FIRST 45 DAYS
         df_temps_avg = (
@@ -177,7 +189,7 @@ class DefaultDataFrames:
             df_trial_duration["Trial ID"]
             .str.replace("( ", "(", regex=False)
             .str.replace(" )", ")", regex=False)
-            .map(TRIAL_TO_ID_MAP)
+            .map(trial_to_id_map)
         )
         df_trial_duration = df_trial_duration.set_index("Trial ID")
 
@@ -194,7 +206,7 @@ class DefaultDataFrames:
         ]
         df_moisture = df_moisture.set_index("Week")
         df_moisture.columns = [
-            TRIAL_TO_ID_MAP[col.replace("*", "")] for col in df_moisture.columns
+            trial_to_id_map[col.replace("*", "")] for col in df_moisture.columns
         ]
         df_moisture_avg = df_moisture.mean().to_frame(
             "Average % Moisture (In Field)"
