@@ -14,7 +14,7 @@ export default function DashboardDisplayControls() {
         <h2>Display Options</h2>
       </div>
       <RadioSingleSelect
-        options={{ "Mesh Bag": "Mesh Bag", "Bulk Dose": "Bulk Dose" }}
+        options={{ "Mesh Bag": "Mesh Bag", Dose: "Bulk Dose" }}
         title="Select Test Method"
         filterKey="testMethod"
         infoText="Choose to see results from either of the two methods for field testing: the mesh bag method, where items are contained in a bag, or bulk dose, where items are loosely loaded into a pile. Results from these two methods are shown separately."

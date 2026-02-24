@@ -13,8 +13,11 @@ export default function OperatingConditionsDashboard({
   const [selectedMetric, setSelectedMetric] = useState("Temperature");
   const [ignoreMaxDays, setIgnoreMaxDays] = useState(false);
   const [applyMovingAverage, setApplyMovingAverage] = useState(true);
+  const [capAt90Days, setCapAt90Days] = useState(false);
+  const [availableTrials, setAvailableTrials] = useState([]);
+  const [selectedTrials, setSelectedTrials] = useState([]);
 
-  const metrics = ["Temperature", "% Moisture", "O2 in Field"];
+  const metrics = ["Temperature", "% Moisture in Field", "% Oxygen, in Field"];
 
   const [effectiveMaxDays, setEffectiveMaxDays] = useState(maxDays);
 
@@ -35,9 +38,9 @@ export default function OperatingConditionsDashboard({
         const selectedColumn =
           selectedMetric === "Temperature"
             ? "Temperature"
-            : selectedMetric === "% Moisture"
+            : selectedMetric === "% Moisture in Field"
             ? "Moisture"
-            : selectedMetric === "O2 in Field"
+            : selectedMetric === "% Oxygen, in Field"
             ? "Oxygen"
             : null;
 
@@ -70,13 +73,34 @@ export default function OperatingConditionsDashboard({
         }
 
         const maxDaysFromData = Math.max(...timeSteps);
-        const calculatedEffectiveMaxDays = ignoreMaxDays
+        const calculatedEffectiveMaxDays = capAt90Days
+          ? Math.min(90, maxDaysFromData)
+          : ignoreMaxDays
           ? maxDaysFromData + 5
           : Math.min(maxDays, maxDaysFromData);
 
         setEffectiveMaxDays(calculatedEffectiveMaxDays); // Update state
 
-        Object.keys(data[0]).forEach((column) => {
+        const nonTrialColumns = [
+          "Time Step",
+          "Operating Condition",
+          "Time Unit",
+        ];
+
+        const trialColumns = Object.keys(data[0]).filter(
+          (column) => !nonTrialColumns.includes(column)
+        );
+
+        if (availableTrials.length === 0) {
+          setAvailableTrials(trialColumns);
+        }
+        const activeTrials =
+          selectedTrials.length > 0 ? selectedTrials : trialColumns;
+
+        trialColumns.forEach((column) => {
+          if (!activeTrials.includes(column)) {
+            return;
+          }
           if (!nonTrialColumns.includes(column)) {
             let yData = filteredData.map((d) => parseFloat(d[column]) || null);
             console.log(yData);
@@ -88,11 +112,23 @@ export default function OperatingConditionsDashboard({
               yData = movingAverage(yData, windowSize);
             }
 
+            if (selectedMetric !== "Temperature") {
+              yData = yData.map((value) =>
+                value === null
+                  ? null
+                  : Math.round(value * 100 * 100) / 100
+              );
+            }
+
             formattedData.push({
               x: timeSteps,
               y: yData,
               mode: "lines+markers",
               name: column,
+              hovertemplate:
+                selectedMetric === "Temperature"
+                  ? "Day %{x}<br>%{y:.2f}<extra>%{fullData.name}</extra>"
+                  : "Day %{x}<br>%{y:.2f}%<extra>%{fullData.name}</extra>",
             });
           }
         });
@@ -119,7 +155,14 @@ export default function OperatingConditionsDashboard({
         console.error("Error loading CSV data:", error);
         setErrorMessage("Failed to load data.");
       });
-  }, [windowSize, selectedMetric, ignoreMaxDays, applyMovingAverage]);
+  }, [
+    windowSize,
+    selectedMetric,
+    ignoreMaxDays,
+    applyMovingAverage,
+    capAt90Days,
+    selectedTrials,
+  ]);
 
   function interpolateData(yData) {
     let lastValidIndex = null;
@@ -165,10 +208,7 @@ export default function OperatingConditionsDashboard({
 
   const title = `${selectedMetric} Over Time`;
 
-  const yMax =
-    plotData.length > 0
-      ? Math.max(...plotData.flatMap((d) => d.y.map((y) => y + 0.05)))
-      : null;
+  const yMax = selectedMetric === "Temperature" ? 200 : 100;
 
   const xTickAngle = plotData.length > 6 ? 90 : 0;
 
@@ -197,6 +237,8 @@ export default function OperatingConditionsDashboard({
                   text: `<b>${yAxisTitle}</b>`,
                 },
                 range: [0, yMax],
+                tickformat: selectedMetric === "Temperature" ? undefined : ".2f",
+                ticksuffix: selectedMetric === "Temperature" ? "" : "%",
                 showline: true,
               },
               xaxis: {
@@ -215,7 +257,7 @@ export default function OperatingConditionsDashboard({
               displayModeBar: false,
             }}
           />
-          <div className="flex justify-center my-4">
+          <div className="flex flex-wrap justify-center my-4 gap-4">
             <div className="w-1/3 flex justify-center">
               <select
                 className="select select-bordered"
@@ -251,7 +293,54 @@ export default function OperatingConditionsDashboard({
                 </span>
               </label>
             </div>
+            <div className="w-1/3 flex justify-center">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={capAt90Days}
+                  onChange={(e) => setCapAt90Days(e.target.checked)}
+                />
+                <span className="ml-2">Cap at 90 Days</span>
+              </label>
+            </div>
           </div>
+          {availableTrials.length > 0 && (
+            <div className="flex flex-col items-center my-2">
+              <span className="mb-1 text-sm font-semibold">
+                Show Trials
+              </span>
+              <div className="flex flex-wrap justify-center gap-2 max-h-32 overflow-y-auto px-2">
+                {availableTrials.map((trial) => (
+                  <label
+                    key={trial}
+                    className="flex items-center text-xs border rounded px-2 py-1"
+                  >
+                    <input
+                      type="checkbox"
+                      className="mr-1"
+                      checked={
+                        selectedTrials.length === 0 ||
+                        selectedTrials.includes(trial)
+                      }
+                      onChange={(e) => {
+                        setSelectedTrials((prev) => {
+                          if (e.target.checked) {
+                            // Add trial
+                            const next = new Set(prev);
+                            next.add(trial);
+                            return Array.from(next);
+                          }
+                          // Remove trial
+                          return prev.filter((t) => t !== trial);
+                        });
+                      }}
+                    />
+                    <span>{trial}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </>
