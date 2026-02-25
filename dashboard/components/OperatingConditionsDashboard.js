@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Plot from "react-plotly.js";
 
 export default function OperatingConditionsDashboard({
@@ -8,7 +8,7 @@ export default function OperatingConditionsDashboard({
 }) {
   // Add windowSize as a prop
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [plotData, setPlotData] = useState([]);
+  const [_plotData, setPlotData] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedMetric, setSelectedMetric] = useState("Temperature");
   const [ignoreMaxDays, setIgnoreMaxDays] = useState(false);
@@ -16,6 +16,9 @@ export default function OperatingConditionsDashboard({
   const [capAt90Days, setCapAt90Days] = useState(false);
   const [availableTrials, setAvailableTrials] = useState([]);
   const [selectedTrials, setSelectedTrials] = useState([]);
+  const plotData = useMemo(() => {
+    return _plotData.filter((d) => selectedTrials?.length ? selectedTrials.includes(d.name) : true);
+  }, [_plotData, selectedTrials]);
 
   const metrics = ["Temperature", "% Moisture in Field", "% Oxygen, in Field"];
 
@@ -65,8 +68,6 @@ export default function OperatingConditionsDashboard({
           );
         });
 
-        console.log("Filtered Data:", filteredData);
-
         let timeSteps = filteredData.map((d) => d["Time Step"]);
         if (selectedMetric !== "Temperature") {
           timeSteps = timeSteps.map((d) => d * 7); // Convert weeks to days
@@ -97,7 +98,6 @@ export default function OperatingConditionsDashboard({
           }
           if (!nonTrialColumns.includes(column)) {
             let yData = filteredData.map((d) => parseFloat(d[column]) || null);
-            console.log(yData);
             yData = interpolateData(yData);
             if (selectedMetric !== "Temperature") {
               windowSize = 3; // Reduce window size for non-temperature metrics
@@ -318,14 +318,20 @@ export default function OperatingConditionsDashboard({
                       }
                       onChange={(e) => {
                         setSelectedTrials((prev) => {
-                          if (e.target.checked) {
-                            // Add trial
-                            const next = new Set(prev);
-                            next.add(trial);
-                            return Array.from(next);
+                          if (!prev.length) {
+                            return availableTrials.filter((t) => t !== trial);
+                          } else {
+                            return availableTrials.filter((t) => {
+                              if (prev.includes(t) && t !== trial) {
+                                return true;
+                              } else if (!prev.includes(t) && t === trial) {
+                                return true;
+                              } else {
+                                return false;
+                              }
+                            })
                           }
-                          // Remove trial
-                          return prev.filter((t) => t !== trial);
+
                         });
                       }}
                     />
