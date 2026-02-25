@@ -213,7 +213,7 @@ export default function OperatingConditionsDashboard({
           <p>{errorMessage}</p>
         </div>
       ) : (
-        <>
+        <div className="flex flex-col items-center">
           <Plot
             data={plotData}
             layout={{
@@ -252,119 +252,130 @@ export default function OperatingConditionsDashboard({
               displayModeBar: false,
             }}
           />
-          <div className="flex flex-wrap justify-center my-4 gap-4">
-            <div className="w-1/3 flex justify-center">
-              <select
-                className="select select-bordered"
-                value={selectedMetric}
-                onChange={(e) => setSelectedMetric(e.target.value)}
-              >
-                {metrics.map((metric) => (
-                  <option key={metric} value={metric}>
-                    {metric}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="w-1/3 flex justify-center">
-              <div className="flex flex-col gap-y-2">
-                <h3>Plot Duration</h3>
-                <label className="flex items-center">
+          <div className="my-4 flex w-full justify-center">
+            <div className="flex w-full max-w-5xl flex-wrap items-stretch justify-center gap-6 px-4">
+              <div className="flex min-w-[220px] flex-1 flex-col">
+                <span className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Metric
+                </span>
+                <select
+                  className="select select-bordered w-full max-w-xs"
+                  value={selectedMetric}
+                  onChange={(e) => setSelectedMetric(e.target.value)}
+                >
+                  {metrics.map((metric) => (
+                    <option key={metric} value={metric}>
+                      {metric}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex min-w-[260px] flex-1 justify-center">
+                <div className="flex flex-col gap-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Plot Duration
+                  </h3>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      className="radio radio-primary"
+                      name="durationRange"
+                      checked={!ignoreMaxDays && !capAt90Days}
+                      onChange={() => {
+                        setIgnoreMaxDays(false);
+                        setCapAt90Days(false);
+                      }}
+                    />
+                    <span className="ml-2 text-sm">Cap at 45 Days</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      className="radio radio-primary"
+                      name="durationRange"
+                      checked={capAt90Days}
+                      onChange={() => {
+                        setCapAt90Days(true);
+                        setIgnoreMaxDays(false);
+                      }}
+                    />
+                    <span className="ml-2 text-sm">Cap at 90 Days</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      className="radio radio-primary"
+                      name="durationRange"
+                      checked={ignoreMaxDays}
+                      onChange={() => {
+                        setIgnoreMaxDays(true);
+                        setCapAt90Days(false);
+                      }}
+                    />
+                    <span className="ml-2 text-sm">Full Duration</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex min-w-[220px] flex-1 items-center justify-center">
+                <label className="flex items-center text-sm">
                   <input
-                    type="radio"
-                    className="radio radio-primary"
-                    name="durationRange"
-                    checked={!ignoreMaxDays && !capAt90Days}
-                    onChange={() => {
-                      setIgnoreMaxDays(false);
-                      setCapAt90Days(false);
-                    }}
+                    type="checkbox"
+                    className="checkbox checkbox-primary checkbox-xs"
+                    checked={!applyMovingAverage}
+                    onChange={(e) => setApplyMovingAverage(!e.target.checked)}
                   />
-                  <span className="ml-2 text-sm">Cap at 45 Days</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    className="radio radio-primary"
-                    name="durationRange"
-                    checked={capAt90Days}
-                    onChange={() => {
-                      setCapAt90Days(true);
-                      setIgnoreMaxDays(false);
-                    }}
-                  />
-                  <span className="ml-2 text-sm">Cap at 90 Days</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    className="radio radio-primary"
-                    name="durationRange"
-                    checked={ignoreMaxDays}
-                    onChange={() => {
-                      setIgnoreMaxDays(true);
-                      setCapAt90Days(false);
-                    }}
-                  />
-                  <span className="ml-2 text-sm">Full Duration</span>
+                  <span className="ml-2">
+                    Display Raw Data (No Moving Average)
+                  </span>
                 </label>
               </div>
             </div>
-            <div className="w-1/3 flex justify-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={!applyMovingAverage}
-                  onChange={(e) => setApplyMovingAverage(!e.target.checked)}
-                />
-                <span className="ml-2">
-                  Display Raw Data (No Moving Average)
-                </span>
-              </label>
-            </div>
-            <div className="w-1/3 flex justify-center"></div>
           </div>
           {availableTrials.length > 0 && (
-            <div className="flex flex-col items-center my-2">
-              <span className="mb-1 text-sm font-semibold">Show Trials</span>
-              <div className="flex flex-wrap justify-center gap-2 max-h-32 overflow-y-auto px-2">
-                {availableTrials.map((trial) => (
-                  <label
-                    key={trial}
-                    className="flex items-center text-xs rounded px-2 py-1"
-                  >
-                    <input
-                      type="checkbox"
-                      className="mr-1 checkbox checkbox-primary checkbox-xs"
-                      checked={
-                        selectedTrials.length === 0 ||
-                        selectedTrials.includes(trial)
-                      }
-                      onChange={(e) => {
-                        setSelectedTrials((prev) => {
-                          if (!prev.length) {
-                            return availableTrials.filter((t) => t !== trial);
-                          } else {
-                            return availableTrials.filter((t) => {
-                              if (prev.includes(t) && t !== trial) {
-                                return true;
-                              } else if (!prev.includes(t) && t === trial) {
-                                return true;
-                              } else {
-                                return false;
-                              }
-                            });
-                          }
-                        });
-                      }}
-                    />
-                    <span>{trial}</span>
-                  </label>
-                ))}
+            <div className="my-2 flex w-full justify-center px-4">
+              <div className="flex w-full max-w-5xl flex-col items-center">
+                <span className="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                  Show Trials
+                </span>
+                <div className="flex max-h-32 w-full flex-wrap justify-center gap-2 overflow-y-auto px-2">
+                  {availableTrials.map((trial) => (
+                    <label
+                      key={trial}
+                      className="flex items-center rounded px-2 py-1 text-xs"
+                    >
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-primary checkbox-xs mr-1"
+                        checked={
+                          selectedTrials.length === 0 ||
+                          selectedTrials.includes(trial)
+                        }
+                        onChange={(e) => {
+                          setSelectedTrials((prev) => {
+                            if (!prev.length) {
+                              return availableTrials.filter((t) => t !== trial);
+                            } else {
+                              return availableTrials.filter((t) => {
+                                if (prev.includes(t) && t !== trial) {
+                                  return true;
+                                } else if (!prev.includes(t) && t === trial) {
+                                  return true;
+                                } else {
+                                  return false;
+                                }
+                              });
+                            }
+                          });
+                        }}
+                      />
+                      <span>{trial}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </>
   );
