@@ -17,7 +17,9 @@ export default function OperatingConditionsDashboard({
   const [availableTrials, setAvailableTrials] = useState([]);
   const [selectedTrials, setSelectedTrials] = useState([]);
   const plotData = useMemo(() => {
-    return _plotData.filter((d) => selectedTrials?.length ? selectedTrials.includes(d.name) : true);
+    return _plotData.filter((d) =>
+      selectedTrials?.length ? selectedTrials.includes(d.name) : true
+    );
   }, [_plotData, selectedTrials]);
 
   const metrics = ["Temperature", "% Moisture in Field", "% Oxygen, in Field"];
@@ -108,9 +110,7 @@ export default function OperatingConditionsDashboard({
 
             if (selectedMetric !== "Temperature") {
               yData = yData.map((value) =>
-                value === null
-                  ? null
-                  : Math.round(value * 100 * 100) / 100
+                value === null ? null : Math.round(value * 100 * 100) / 100
               );
             }
 
@@ -231,7 +231,8 @@ export default function OperatingConditionsDashboard({
                   text: `<b>${yAxisTitle}</b>`,
                 },
                 range: [0, yMax],
-                tickformat: selectedMetric === "Temperature" ? undefined : ".2f",
+                tickformat:
+                  selectedMetric === "Temperature" ? undefined : ".2f",
                 ticksuffix: selectedMetric === "Temperature" ? "" : "%",
                 showline: true,
               },
@@ -266,14 +267,48 @@ export default function OperatingConditionsDashboard({
               </select>
             </div>
             <div className="w-1/3 flex justify-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={!ignoreMaxDays}
-                  onChange={(e) => setIgnoreMaxDays(!e.target.checked)}
-                />
-                <span className="ml-2">Cap at 45 Days</span>
-              </label>
+              <div className="flex flex-col gap-y-2">
+                <h3>Plot Duration</h3>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    className="radio radio-primary"
+                    name="durationRange"
+                    checked={!ignoreMaxDays && !capAt90Days}
+                    onChange={() => {
+                      setIgnoreMaxDays(false);
+                      setCapAt90Days(false);
+                    }}
+                  />
+                  <span className="ml-2 text-sm">Cap at 45 Days</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    className="radio radio-primary"
+                    name="durationRange"
+                    checked={capAt90Days}
+                    onChange={() => {
+                      setCapAt90Days(true);
+                      setIgnoreMaxDays(false);
+                    }}
+                  />
+                  <span className="ml-2 text-sm">Cap at 90 Days</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    className="radio radio-primary"
+                    name="durationRange"
+                    checked={ignoreMaxDays}
+                    onChange={() => {
+                      setIgnoreMaxDays(true);
+                      setCapAt90Days(false);
+                    }}
+                  />
+                  <span className="ml-2 text-sm">Full Duration</span>
+                </label>
+              </div>
             </div>
             <div className="w-1/3 flex justify-center">
               <label className="flex items-center">
@@ -287,31 +322,20 @@ export default function OperatingConditionsDashboard({
                 </span>
               </label>
             </div>
-            <div className="w-1/3 flex justify-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={capAt90Days}
-                  onChange={(e) => setCapAt90Days(e.target.checked)}
-                />
-                <span className="ml-2">Cap at 90 Days</span>
-              </label>
-            </div>
+            <div className="w-1/3 flex justify-center"></div>
           </div>
           {availableTrials.length > 0 && (
             <div className="flex flex-col items-center my-2">
-              <span className="mb-1 text-sm font-semibold">
-                Show Trials
-              </span>
+              <span className="mb-1 text-sm font-semibold">Show Trials</span>
               <div className="flex flex-wrap justify-center gap-2 max-h-32 overflow-y-auto px-2">
                 {availableTrials.map((trial) => (
                   <label
                     key={trial}
-                    className="flex items-center text-xs border rounded px-2 py-1"
+                    className="flex items-center text-xs rounded px-2 py-1"
                   >
                     <input
                       type="checkbox"
-                      className="mr-1"
+                      className="mr-1 checkbox checkbox-primary checkbox-xs"
                       checked={
                         selectedTrials.length === 0 ||
                         selectedTrials.includes(trial)
@@ -329,9 +353,8 @@ export default function OperatingConditionsDashboard({
                               } else {
                                 return false;
                               }
-                            })
+                            });
                           }
-
                         });
                       }}
                     />
