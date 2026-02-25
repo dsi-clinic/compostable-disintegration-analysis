@@ -81,12 +81,6 @@ export default function OperatingConditionsDashboard({
 
         setEffectiveMaxDays(calculatedEffectiveMaxDays); // Update state
 
-        const nonTrialColumns = [
-          "Time Step",
-          "Operating Condition",
-          "Time Unit",
-        ];
-
         const trialColumns = Object.keys(data[0]).filter(
           (column) => !nonTrialColumns.includes(column)
         );
