@@ -14,10 +14,15 @@ export const moistureFilterDict = {
 };
 
 export const temperatureFilterDict = {
-  "<140F": [-Infinity, 140, false],
-  "140-150F": [140, 150, true],
-  "150-160F": [150, 160, true],
-  ">160F": [160, Infinity, false],
+  "<130F": [-Infinity, 130, false],
+  "131-135F": [130, 135, true],
+  "136-140F": [135, 140, true],
+  "141-145F": [140, 145, true],
+  "146-150F": [145, 150, true],
+  "151-155F": [150, 155, true],
+  "156-160F": [155, 160, true],
+  "161-165F": [160, 165, true],
+  ">165F": [165, Infinity, false],
 };
 
 export const trialDurationDict = {

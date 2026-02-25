@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Plot from "react-plotly.js";
 
 export default function OperatingConditionsDashboard({
@@ -8,13 +8,21 @@ export default function OperatingConditionsDashboard({
 }) {
   // Add windowSize as a prop
   const [dataLoaded, setDataLoaded] = useState(false);
-  const [plotData, setPlotData] = useState([]);
+  const [_plotData, setPlotData] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedMetric, setSelectedMetric] = useState("Temperature");
   const [ignoreMaxDays, setIgnoreMaxDays] = useState(false);
   const [applyMovingAverage, setApplyMovingAverage] = useState(true);
+  const [capAt90Days, setCapAt90Days] = useState(false);
+  const [availableTrials, setAvailableTrials] = useState([]);
+  const [selectedTrials, setSelectedTrials] = useState([]);
+  const plotData = useMemo(() => {
+    return _plotData.filter((d) =>
+      selectedTrials?.length ? selectedTrials.includes(d.name) : true
+    );
+  }, [_plotData, selectedTrials]);
 
-  const metrics = ["Temperature", "% Moisture", "O2 in Field"];
+  const metrics = ["Temperature", "% Moisture in Field", "% Oxygen, in Field"];
 
   const [effectiveMaxDays, setEffectiveMaxDays] = useState(maxDays);
 
@@ -35,9 +43,9 @@ export default function OperatingConditionsDashboard({
         const selectedColumn =
           selectedMetric === "Temperature"
             ? "Temperature"
-            : selectedMetric === "% Moisture"
+            : selectedMetric === "% Moisture in Field"
             ? "Moisture"
-            : selectedMetric === "O2 in Field"
+            : selectedMetric === "% Oxygen, in Field"
             ? "Oxygen"
             : null;
 
@@ -62,24 +70,36 @@ export default function OperatingConditionsDashboard({
           );
         });
 
-        console.log("Filtered Data:", filteredData);
-
         let timeSteps = filteredData.map((d) => d["Time Step"]);
         if (selectedMetric !== "Temperature") {
           timeSteps = timeSteps.map((d) => d * 7); // Convert weeks to days
         }
 
         const maxDaysFromData = Math.max(...timeSteps);
-        const calculatedEffectiveMaxDays = ignoreMaxDays
+        const calculatedEffectiveMaxDays = capAt90Days
+          ? Math.min(90, maxDaysFromData)
+          : ignoreMaxDays
           ? maxDaysFromData + 5
           : Math.min(maxDays, maxDaysFromData);
 
         setEffectiveMaxDays(calculatedEffectiveMaxDays); // Update state
 
-        Object.keys(data[0]).forEach((column) => {
+        const trialColumns = Object.keys(data[0]).filter(
+          (column) => !nonTrialColumns.includes(column)
+        );
+
+        if (availableTrials.length === 0) {
+          setAvailableTrials(trialColumns);
+        }
+        const activeTrials =
+          selectedTrials.length > 0 ? selectedTrials : trialColumns;
+
+        trialColumns.forEach((column) => {
+          if (!activeTrials.includes(column)) {
+            return;
+          }
           if (!nonTrialColumns.includes(column)) {
             let yData = filteredData.map((d) => parseFloat(d[column]) || null);
-            console.log(yData);
             yData = interpolateData(yData);
             if (selectedMetric !== "Temperature") {
               windowSize = 3; // Reduce window size for non-temperature metrics
@@ -88,11 +108,21 @@ export default function OperatingConditionsDashboard({
               yData = movingAverage(yData, windowSize);
             }
 
+            if (selectedMetric !== "Temperature") {
+              yData = yData.map((value) =>
+                value === null ? null : Math.round(value * 100 * 100) / 100
+              );
+            }
+
             formattedData.push({
               x: timeSteps,
               y: yData,
               mode: "lines+markers",
               name: column,
+              hovertemplate:
+                selectedMetric === "Temperature"
+                  ? "Day %{x}<br>%{y:.2f}<extra>%{fullData.name}</extra>"
+                  : "Day %{x}<br>%{y:.2f}%<extra>%{fullData.name}</extra>",
             });
           }
         });
@@ -119,7 +149,14 @@ export default function OperatingConditionsDashboard({
         console.error("Error loading CSV data:", error);
         setErrorMessage("Failed to load data.");
       });
-  }, [windowSize, selectedMetric, ignoreMaxDays, applyMovingAverage]);
+  }, [
+    windowSize,
+    selectedMetric,
+    ignoreMaxDays,
+    applyMovingAverage,
+    capAt90Days,
+    selectedTrials,
+  ]);
 
   function interpolateData(yData) {
     let lastValidIndex = null;
@@ -165,10 +202,7 @@ export default function OperatingConditionsDashboard({
 
   const title = `${selectedMetric} Over Time`;
 
-  const yMax =
-    plotData.length > 0
-      ? Math.max(...plotData.flatMap((d) => d.y.map((y) => y + 0.05)))
-      : null;
+  const yMax = selectedMetric === "Temperature" ? 200 : 100;
 
   const xTickAngle = plotData.length > 6 ? 90 : 0;
 
@@ -179,7 +213,7 @@ export default function OperatingConditionsDashboard({
           <p>{errorMessage}</p>
         </div>
       ) : (
-        <>
+        <div className="flex flex-col items-center">
           <Plot
             data={plotData}
             layout={{
@@ -197,6 +231,9 @@ export default function OperatingConditionsDashboard({
                   text: `<b>${yAxisTitle}</b>`,
                 },
                 range: [0, yMax],
+                tickformat:
+                  selectedMetric === "Temperature" ? undefined : ".2f",
+                ticksuffix: selectedMetric === "Temperature" ? "" : "%",
                 showline: true,
               },
               xaxis: {
@@ -215,44 +252,130 @@ export default function OperatingConditionsDashboard({
               displayModeBar: false,
             }}
           />
-          <div className="flex justify-center my-4">
-            <div className="w-1/3 flex justify-center">
-              <select
-                className="select select-bordered"
-                value={selectedMetric}
-                onChange={(e) => setSelectedMetric(e.target.value)}
-              >
-                {metrics.map((metric) => (
-                  <option key={metric} value={metric}>
-                    {metric}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="w-1/3 flex justify-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={!ignoreMaxDays}
-                  onChange={(e) => setIgnoreMaxDays(!e.target.checked)}
-                />
-                <span className="ml-2">Cap at 45 Days</span>
-              </label>
-            </div>
-            <div className="w-1/3 flex justify-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={!applyMovingAverage}
-                  onChange={(e) => setApplyMovingAverage(!e.target.checked)}
-                />
-                <span className="ml-2">
-                  Display Raw Data (No Moving Average)
+          <div className="my-4 flex w-full justify-center">
+            <div className="flex w-full max-w-5xl flex-wrap items-stretch justify-center gap-6 px-4">
+              <div className="flex min-w-[220px] flex-1 flex-col">
+                <span className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Metric
                 </span>
-              </label>
+                <select
+                  className="select select-bordered w-full max-w-xs"
+                  value={selectedMetric}
+                  onChange={(e) => setSelectedMetric(e.target.value)}
+                >
+                  {metrics.map((metric) => (
+                    <option key={metric} value={metric}>
+                      {metric}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex min-w-[260px] flex-1 justify-center">
+                <div className="flex flex-col gap-y-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Plot Duration
+                  </h3>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      className="radio radio-primary"
+                      name="durationRange"
+                      checked={!ignoreMaxDays && !capAt90Days}
+                      onChange={() => {
+                        setIgnoreMaxDays(false);
+                        setCapAt90Days(false);
+                      }}
+                    />
+                    <span className="ml-2 text-sm">Cap at 45 Days</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      className="radio radio-primary"
+                      name="durationRange"
+                      checked={capAt90Days}
+                      onChange={() => {
+                        setCapAt90Days(true);
+                        setIgnoreMaxDays(false);
+                      }}
+                    />
+                    <span className="ml-2 text-sm">Cap at 90 Days</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      className="radio radio-primary"
+                      name="durationRange"
+                      checked={ignoreMaxDays}
+                      onChange={() => {
+                        setIgnoreMaxDays(true);
+                        setCapAt90Days(false);
+                      }}
+                    />
+                    <span className="ml-2 text-sm">Full Duration</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex min-w-[220px] flex-1 items-center justify-center">
+                <label className="flex items-center text-sm">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-primary checkbox-xs"
+                    checked={!applyMovingAverage}
+                    onChange={(e) => setApplyMovingAverage(!e.target.checked)}
+                  />
+                  <span className="ml-2">
+                    Display Raw Data (No Moving Average)
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
-        </>
+          {availableTrials.length > 0 && (
+            <div className="my-2 flex w-full justify-center px-4">
+              <div className="flex w-full max-w-5xl flex-col items-center">
+                <span className="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                  Show Trials
+                </span>
+                <div className="flex max-h-32 w-full flex-wrap justify-center gap-2 overflow-y-auto px-2">
+                  {availableTrials.map((trial) => (
+                    <label
+                      key={trial}
+                      className="flex items-center rounded px-2 py-1 text-xs"
+                    >
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-primary checkbox-xs mr-1"
+                        checked={
+                          selectedTrials.length === 0 ||
+                          selectedTrials.includes(trial)
+                        }
+                        onChange={(e) => {
+                          setSelectedTrials((prev) => {
+                            if (!prev.length) {
+                              return availableTrials.filter((t) => t !== trial);
+                            } else {
+                              return availableTrials.filter((t) => {
+                                if (prev.includes(t) && t !== trial) {
+                                  return true;
+                                } else if (!prev.includes(t) && t === trial) {
+                                  return true;
+                                } else {
+                                  return false;
+                                }
+                              });
+                            }
+                          });
+                        }}
+                      />
+                      <span>{trial}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </>
   );
