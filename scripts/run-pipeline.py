@@ -97,8 +97,9 @@ def main(suffix: str = ""):
     # Ensure all Item Format columns are title case
     all_trials["Item Format"] = all_trials["Item Format"].str.title()
 
-    # TODO incorporate actual data
-    all_trials["Timepoint"] = "Final"
+    # Filtering for only final timepoints
+    # TODO: incorporate midpoint timepoints
+    all_trials = all_trials[all_trials["Timepoint"] == "Final"]
 
     # CFTP as of 2025 is excluding AD data from the dashboard, may include in future
     all_trials = all_trials[
