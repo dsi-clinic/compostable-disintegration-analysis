@@ -153,7 +153,8 @@ export const prepareData = async (searchParams, useTestData=false) => {
 
   // filter data based on selected filters
   filteredData = filterData(filteredData, "Test Method", [testMethod]);
-  filteredData = filterData(filteredData, "Timepoint", [timepoint]);
+  // TODO: Enable final and midpoint timepoint filters
+  // filteredData = filterData(filteredData, "Timepoint", [timepoint]);
   filteredData = filterData(filteredData, "Technology", technologies);
   // Return empty object to preserve privacy if not enough trials (Except for Bulk Dose)
   const technologyTrialIDs = new Set(filteredData.map((d) => d["Trial ID"]));
