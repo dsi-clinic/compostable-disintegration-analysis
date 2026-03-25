@@ -30,10 +30,7 @@ export const BoxPlot = ({
   });
 
   const yScale = scaleLinear({
-    domain: [
-      0,
-      Math.max(Math.max(...data.map((d) => d.max)), 1),
-    ],
+    domain: [0, Math.max(Math.max(...data.map((d) => d.max)), 1)],
     range: [yMax, 0],
   });
 
@@ -45,7 +42,10 @@ export const BoxPlot = ({
     const barWidth = xScale.bandwidth();
     showTooltip({
       tooltipData: datum,
-      tooltipLeft: xScale(data.findIndex((d) => d === datum).toString()) + margin.left + barWidth /2,
+      tooltipLeft:
+        xScale(data.findIndex((d) => d === datum).toString()) +
+        margin.left +
+        barWidth / 2,
       tooltipTop: coords?.y,
     });
   };
@@ -65,7 +65,7 @@ export const BoxPlot = ({
             tickLabelProps={() => ({
               fontSize: 12,
               textAnchor: data.length > 5 ? "end" : "middle",
-              dy: data.length > 5 ? "-0.25em" : "0.25em",
+              dy: data.length > 5 ? "-0.25em" : "0.75em",
               angle: data.length > 5 ? -90 : 0,
             })}
             numTicks={data.length}
@@ -260,69 +260,75 @@ const CustomTickLabel = ({
   }
 };
 
-const CustomTooltip = ({ tooltipLeft, tooltipData, top, height, width, yScale }) => {
-
+const CustomTooltip = ({
+  tooltipLeft,
+  tooltipData,
+  top,
+  height,
+  width,
+  yScale,
+}) => {
   const mappedLabels = useMemo(() => {
-      let countByValue = {};
-      tooltipKeys.forEach((key) => {
-        countByValue[tooltipData[key]] = (countByValue[tooltipData[key]] || 0) + 1
-      })
-      let keyRanges = {}
-      const sortedValues = Object.keys(countByValue).sort((a,b) => +b-+a)
+    let countByValue = {};
+    tooltipKeys.forEach((key) => {
+      countByValue[tooltipData[key]] =
+        (countByValue[tooltipData[key]] || 0) + 1;
+    });
+    let keyRanges = {};
+    const sortedValues = Object.keys(countByValue).sort((a, b) => +b - +a);
 
-      sortedValues.forEach((key,i) => {
-        let y = yScale(key) - 10
-        // shift up and down 20 for each count
-        let minY = y - countByValue[key]/2 * 20
-        let maxY = y + countByValue[key]/2 * 20 
+    sortedValues.forEach((key, i) => {
+      let y = yScale(key) - 10;
+      // shift up and down 20 for each count
+      let minY = y - (countByValue[key] / 2) * 20;
+      let maxY = y + (countByValue[key] / 2) * 20;
 
-        keyRanges[key] = {
-          minY, 
-          y,
-          maxY
-        }
-      })
-      let areColided = true;
-      let index = 0;
-      let runs = 0
-      while (areColided && runs < 100) {
-        areColided = false
-        for (let i = 0; i < sortedValues.length; i++) {
-          let key = sortedValues[i]
-          let range = keyRanges[key]
-          for (let j = i+1; j < sortedValues.length; j++) {
-            let key2 = sortedValues[j]
-            let range2 = keyRanges[key2]
-            if (range.minY < range2.maxY && range.maxY > range2.minY) {
-              areColided = true
-              let shift = 10
-              keyRanges[key].minY -= shift
-              keyRanges[key].y -= shift
-              keyRanges[key].maxY -= shift
+      keyRanges[key] = {
+        minY,
+        y,
+        maxY,
+      };
+    });
+    let areColided = true;
+    let index = 0;
+    let runs = 0;
+    while (areColided && runs < 100) {
+      areColided = false;
+      for (let i = 0; i < sortedValues.length; i++) {
+        let key = sortedValues[i];
+        let range = keyRanges[key];
+        for (let j = i + 1; j < sortedValues.length; j++) {
+          let key2 = sortedValues[j];
+          let range2 = keyRanges[key2];
+          if (range.minY < range2.maxY && range.maxY > range2.minY) {
+            areColided = true;
+            let shift = 10;
+            keyRanges[key].minY -= shift;
+            keyRanges[key].y -= shift;
+            keyRanges[key].maxY -= shift;
 
-              keyRanges[key2].minY += shift
-              keyRanges[key2].y += shift
-              keyRanges[key2].maxY += shift
-            }
+            keyRanges[key2].minY += shift;
+            keyRanges[key2].y += shift;
+            keyRanges[key2].maxY += shift;
           }
         }
-        runs++
       }
+      runs++;
+    }
 
-      return tooltipKeys.map((key) => {
-        const value = tooltipData[key]
-        countByValue[value] = countByValue[value] - 1
-        const yValue = yScale(value)
-        const offset = countByValue[value] * 20
-        const displayValue = keyRanges[value].maxY - offset
-        return {
-          yValue,
-          value,
-          displayValue,
-          key
-        };
-      })
-
+    return tooltipKeys.map((key) => {
+      const value = tooltipData[key];
+      countByValue[value] = countByValue[value] - 1;
+      const yValue = yScale(value);
+      const offset = countByValue[value] * 20;
+      const displayValue = keyRanges[value].maxY - offset;
+      return {
+        yValue,
+        value,
+        displayValue,
+        key,
+      };
+    });
   }, [tooltipData, yScale]);
   const orientation = tooltipLeft > width - 120 ? "left" : "right";
   const direction = orientation === "left" ? -1 : 1;
@@ -348,7 +354,7 @@ const CustomTooltip = ({ tooltipLeft, tooltipData, top, height, width, yScale })
             y={entry.displayValue - 9}
             width={100}
             height={22}
-            fill={'white'}
+            fill={"white"}
             stroke={tooltipData.color}
             strokeWidth={1}
           />

@@ -120,7 +120,7 @@ def main(suffix: str = ""):
         axis=0,
     )
     for OUTPUT_DIR in [APP_DATA_DIR, DATA_DIR]:
-        trials_outpath = OUTPUT_DIR / f"all_trials_processed{suffix}.csv"
+        trials_outpath = OUTPUT_DIR / f"disintegration_data_all{suffix}.csv"
         operating_conditions_avg_outpath = (
             OUTPUT_DIR / f"operating_conditions_avg{suffix}.csv"
         )

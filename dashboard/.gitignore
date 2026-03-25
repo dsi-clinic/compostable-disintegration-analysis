@@ -11,6 +11,7 @@ pnpm-lock.yaml
 /coverage
 
 data/all_trials_processed*.csv
+data/disintegration_data_all*.csv
 data/operating_conditions_avg*.csv
 data/operating_conditions_full*.csv
 

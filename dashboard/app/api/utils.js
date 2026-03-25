@@ -9,18 +9,18 @@ import { loadData } from "./constants";
 
 const calculateQuartiles = (data, key) => {
   const sorted = data.map((d) => parseFloat(d[key])).sort((a, b) => a - b);
-  const max = d3.max(sorted)
-  const min = d3.min(sorted)
+  const max = d3.max(sorted);
+  const min = d3.min(sorted);
   const q1 = d3.quantile(sorted, 0.25);
   const q3 = d3.quantile(sorted, 0.75);
-  const upperfence = Math.min(q3 + 1.5 * (q3 - q1), max)
-  const lowerfence = Math.max(q1 - 1.5 * (q3 - q1), min)
-  const outliers = sorted.filter(v => v>upperfence || v<lowerfence)
+  const upperfence = Math.min(q3 + 1.5 * (q3 - q1), max);
+  const lowerfence = Math.max(q1 - 1.5 * (q3 - q1), min);
+  const outliers = sorted.filter((v) => v > upperfence || v < lowerfence);
   return {
     lowerfence,
     q1,
-    median: Math.round(d3.quantile(sorted, 0.5) * 1000)/1000,
-    mean: Math.round(d3.mean(sorted) * 1000)/1000,
+    median: Math.round(d3.quantile(sorted, 0.5) * 1000) / 1000,
+    mean: Math.round(d3.mean(sorted) * 1000) / 1000,
     q3,
     upperfence,
     max,
@@ -46,13 +46,13 @@ const filterTrialIDsByConditions = (
   column,
   filters,
   operatingConditions,
-  filterDict
+  filterDict,
 ) => {
   const trialIDs = new Set();
   filters.forEach((filter) => {
     if (filters.length === Object.keys(filterDict).length) {
       operatingConditions.forEach((condition) =>
-        trialIDs.add(condition["Trial ID"])
+        trialIDs.add(condition["Trial ID"]),
       );
       return Array.from(trialIDs);
     } else {
@@ -62,7 +62,7 @@ const filterTrialIDsByConditions = (
         column,
         low,
         high,
-        inclusive
+        inclusive,
       );
       filteredTrialIDs.forEach((id) => trialIDs.add(id));
     }
@@ -75,7 +75,7 @@ const filterData = (data, column, conditions) => {
     return data;
   }
   return data.filter((row) =>
-    conditions.some((condition) => row[column] === condition)
+    conditions.some((condition) => row[column] === condition),
   );
 };
 
@@ -85,12 +85,12 @@ const getIntersectingTrialIDs = (...sets) => {
   }
   const [firstSet, ...restSets] = sets;
   const intersection = [...firstSet].filter((item) =>
-    restSets.every((set) => set.has(item))
+    restSets.every((set) => set.has(item)),
   );
   return new Set(intersection);
 };
 
-export const prepareData = async (searchParams, useTestData=false) => {
+export const prepareData = async (searchParams, useTestData = false) => {
   // Display params
   const aggCol = searchParams.get("aggcol") || "Material Class I";
   const displayCol = searchParams.get("displaycol") || "% Residuals (Mass)";
@@ -148,7 +148,7 @@ export const prepareData = async (searchParams, useTestData=false) => {
 
   // Filter out rows where displayCol is empty or null
   filteredData = filteredData.filter(
-    (d) => d[displayCol] !== "" && d[displayCol] !== null
+    (d) => d[displayCol] !== "" && d[displayCol] !== null,
   );
 
   // filter data based on selected filters
@@ -170,7 +170,7 @@ export const prepareData = async (searchParams, useTestData=false) => {
   filteredData = filterData(
     filteredData,
     "Material Class III",
-    specificMaterials
+    specificMaterials,
   );
   filteredData = filterData(filteredData, "Item Format", formats);
   filteredData = filterData(filteredData, "Item Brand", brands);
@@ -199,33 +199,33 @@ export const prepareData = async (searchParams, useTestData=false) => {
     "Average % Moisture (In Field)",
     moistureFilter,
     operatingConditions,
-    moistureFilterDict
+    moistureFilterDict,
   );
 
   const temperatureTrialIDs = filterTrialIDsByConditions(
     "Average Temperature (F)",
     temperatureFilter,
     operatingConditions,
-    temperatureFilterDict
+    temperatureFilterDict,
   );
   const trialDurationTrialIDs = filterTrialIDsByConditions(
     "Trial Duration",
     trialDurations,
     operatingConditions,
-    trialDurationDict
+    trialDurationDict,
   );
 
   const combinedTrialIDs = getIntersectingTrialIDs(
     moistureTrialIDs,
     temperatureTrialIDs,
-    trialDurationTrialIDs
+    trialDurationTrialIDs,
   );
 
   if (combinedTrialIDs.size === 0) {
     filteredData = [];
   } else {
     filteredData = filteredData.filter((d) =>
-      combinedTrialIDs.has(d["Trial ID"])
+      combinedTrialIDs.has(d["Trial ID"]),
     );
   }
 
@@ -278,8 +278,7 @@ export const prepareData = async (searchParams, useTestData=false) => {
   };
 };
 
-
-export const getUniqueValues = async (columns, useTestData=false) => {
+export const getUniqueValues = async (columns, useTestData = false) => {
   let { trialData: data } = await loadData(useTestData);
   const uniqueValues = {};
   columns.forEach((column) => {
@@ -292,8 +291,11 @@ export const getUniqueValues = async (columns, useTestData=false) => {
         if (aStartsWithPos && !bStartsWithPos) return 1;
         if (bStartsWithPos && !aStartsWithPos) return -1;
 
-        return a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'})
-      }
+        return a.localeCompare(b, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+      },
     );
   });
   return uniqueValues;

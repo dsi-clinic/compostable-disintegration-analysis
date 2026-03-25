@@ -2,6 +2,12 @@
 import { useEffect, useState, useMemo } from "react";
 import Plot from "react-plotly.js";
 
+const DEFAULT_RANGES = {
+  Temperature: { min: 100, max: 215 },
+  "% Moisture in Field": { min: 25, max: 75 },
+  "% Oxygen, in Field": { min: 0, max: 25 },
+};
+
 export default function OperatingConditionsDashboard({
   maxDays = 45,
   windowSize = 10,
@@ -16,9 +22,10 @@ export default function OperatingConditionsDashboard({
   const [capAt90Days, setCapAt90Days] = useState(false);
   const [availableTrials, setAvailableTrials] = useState([]);
   const [selectedTrials, setSelectedTrials] = useState([]);
+  const [yAxisRanges, setYAxisRanges] = useState(DEFAULT_RANGES);
   const plotData = useMemo(() => {
     return _plotData.filter((d) =>
-      selectedTrials?.length ? selectedTrials.includes(d.name) : true
+      selectedTrials?.length ? selectedTrials.includes(d.name) : true,
     );
   }, [_plotData, selectedTrials]);
 
@@ -44,13 +51,13 @@ export default function OperatingConditionsDashboard({
           selectedMetric === "Temperature"
             ? "Temperature"
             : selectedMetric === "% Moisture in Field"
-            ? "Moisture"
-            : selectedMetric === "% Oxygen, in Field"
-            ? "Oxygen"
-            : null;
+              ? "Moisture"
+              : selectedMetric === "% Oxygen, in Field"
+                ? "Oxygen"
+                : null;
 
         let filteredData = data.filter(
-          (d) => d["Operating Condition"] === selectedColumn
+          (d) => d["Operating Condition"] === selectedColumn,
         );
 
         const nonTrialColumns = [
@@ -66,7 +73,7 @@ export default function OperatingConditionsDashboard({
               !nonTrialColumns.includes(col) &&
               row[col] !== null &&
               row[col] !== undefined &&
-              row[col] !== ""
+              row[col] !== "",
           );
         });
 
@@ -79,13 +86,13 @@ export default function OperatingConditionsDashboard({
         const calculatedEffectiveMaxDays = capAt90Days
           ? Math.min(90, maxDaysFromData)
           : ignoreMaxDays
-          ? maxDaysFromData + 5
-          : Math.min(maxDays, maxDaysFromData);
+            ? maxDaysFromData + 5
+            : Math.min(maxDays, maxDaysFromData);
 
         setEffectiveMaxDays(calculatedEffectiveMaxDays); // Update state
 
         const trialColumns = Object.keys(data[0]).filter(
-          (column) => !nonTrialColumns.includes(column)
+          (column) => !nonTrialColumns.includes(column),
         );
 
         if (availableTrials.length === 0) {
@@ -110,7 +117,7 @@ export default function OperatingConditionsDashboard({
 
             if (selectedMetric !== "Temperature") {
               yData = yData.map((value) =>
-                value === null ? null : Math.round(value * 100 * 100) / 100
+                value === null ? null : Math.round(value * 100 * 100) / 100,
               );
             }
 
@@ -202,7 +209,7 @@ export default function OperatingConditionsDashboard({
 
   const title = `${selectedMetric} Over Time`;
 
-  const yMax = selectedMetric === "Temperature" ? 200 : 100;
+  const currentRange = yAxisRanges[selectedMetric];
 
   const xTickAngle = plotData.length > 6 ? 90 : 0;
 
@@ -214,47 +221,93 @@ export default function OperatingConditionsDashboard({
         </div>
       ) : (
         <div className="flex flex-col items-center">
-          <Plot
-            data={plotData}
-            layout={{
-              width: 1280,
-              height: 600,
-              title: {
-                text: `<b>${title}</b>`,
-                x: 0.5,
-                xanchor: "center",
-                yanchor: "top",
-              },
-              showlegend: true,
-              yaxis: {
+          <div className="relative">
+            <Plot
+              data={plotData}
+              layout={{
+                width: 1280,
+                height: 600,
                 title: {
-                  text: `<b>${yAxisTitle}</b>`,
+                  text: `<b>${title}</b>`,
+                  x: 0.5,
+                  xanchor: "center",
+                  yanchor: "top",
                 },
-                range: [0, yMax],
-                tickformat:
-                  selectedMetric === "Temperature" ? undefined : ".2f",
-                ticksuffix: selectedMetric === "Temperature" ? "" : "%",
-                showline: true,
-              },
-              xaxis: {
-                title: {
-                  text: "<b>Days</b>",
+                showlegend: true,
+                yaxis: {
+                  title: {
+                    text: `<b>${yAxisTitle}</b>`,
+                  },
+                  range: [currentRange.min, currentRange.max],
+                  tickformat:
+                    selectedMetric === "Temperature" ? undefined : ".2f",
+                  ticksuffix: selectedMetric === "Temperature" ? "" : "%",
+                  showline: true,
                 },
-                tickangle: xTickAngle,
-                ticklen: 10,
-                automargin: true,
-                range: [0, effectiveMaxDays],
-                showline: true,
-              },
-              hovermode: "x",
-            }}
-            config={{
-              displayModeBar: false,
-            }}
-          />
+                xaxis: {
+                  title: {
+                    text: "<b>Days</b>",
+                  },
+                  tickangle: xTickAngle,
+                  ticklen: 10,
+                  automargin: true,
+                  range: [0, effectiveMaxDays],
+                  showline: true,
+                },
+                hovermode: "x",
+              }}
+              config={{
+                displayModeBar: false,
+              }}
+            />
+          </div>
           <div className="my-4 flex w-full justify-center">
-            <div className="flex w-full max-w-5xl flex-wrap items-stretch justify-center gap-6 px-4">
-              <div className="flex min-w-[220px] flex-1 flex-col">
+            <div className="flex w-full max-w-5xl items-start justify-evenly gap-6 px-4">
+              {availableTrials.length > 0 && (
+                <div className="flex flex-col">
+                  <span className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Show Trials
+                  </span>
+                  <div className="flex max-h-56 flex-col gap-1 overflow-y-auto pr-2">
+                    {availableTrials.map((trial) => (
+                      <label
+                        key={trial}
+                        className="flex items-center rounded px-1 py-0.5 text-xs"
+                      >
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-primary checkbox-xs mr-1"
+                          checked={
+                            selectedTrials.length === 0 ||
+                            selectedTrials.includes(trial)
+                          }
+                          onChange={(e) => {
+                            setSelectedTrials((prev) => {
+                              if (!prev.length) {
+                                return availableTrials.filter(
+                                  (t) => t !== trial,
+                                );
+                              } else {
+                                return availableTrials.filter((t) => {
+                                  if (prev.includes(t) && t !== trial) {
+                                    return true;
+                                  } else if (!prev.includes(t) && t === trial) {
+                                    return true;
+                                  } else {
+                                    return false;
+                                  }
+                                });
+                              }
+                            });
+                          }}
+                        />
+                        <span>{trial}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-col">
                 <span className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Metric
                 </span>
@@ -269,8 +322,71 @@ export default function OperatingConditionsDashboard({
                     </option>
                   ))}
                 </select>
+                <span className="mb-1 mt-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Y-Axis Range ({selectedMetric === "Temperature" ? "°F" : "%"})
+                </span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className="input input-bordered input-sm w-20"
+                    value={currentRange.min}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        setYAxisRanges((prev) => ({
+                          ...prev,
+                          [selectedMetric]: {
+                            ...prev[selectedMetric],
+                            min: val,
+                          },
+                        }));
+                      }
+                    }}
+                  />
+                  <span className="text-gray-400">—</span>
+                  <input
+                    type="number"
+                    className="input input-bordered input-sm w-20"
+                    value={currentRange.max}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val)) {
+                        setYAxisRanges((prev) => ({
+                          ...prev,
+                          [selectedMetric]: {
+                            ...prev[selectedMetric],
+                            max: val,
+                          },
+                        }));
+                      }
+                    }}
+                  />
+                  <button
+                    className="btn btn-ghost btn-xs"
+                    title="Reset to default"
+                    onClick={() =>
+                      setYAxisRanges((prev) => ({
+                        ...prev,
+                        [selectedMetric]: DEFAULT_RANGES[selectedMetric],
+                      }))
+                    }
+                  >
+                    Reset
+                  </button>
+                </div>
+                <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="toggle toggle-primary toggle-sm"
+                    checked={!applyMovingAverage}
+                    onChange={(e) => setApplyMovingAverage(!e.target.checked)}
+                  />
+                  <span>
+                    Display Raw Data (No Moving Average)
+                  </span>
+                </label>
               </div>
-              <div className="flex min-w-[260px] flex-1 justify-center">
+              <div className="flex flex-col">
                 <div className="flex flex-col gap-y-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Plot Duration
@@ -316,65 +432,8 @@ export default function OperatingConditionsDashboard({
                   </label>
                 </div>
               </div>
-              <div className="flex min-w-[220px] flex-1 items-center justify-center">
-                <label className="flex items-center text-sm">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-primary checkbox-xs"
-                    checked={!applyMovingAverage}
-                    onChange={(e) => setApplyMovingAverage(!e.target.checked)}
-                  />
-                  <span className="ml-2">
-                    Display Raw Data (No Moving Average)
-                  </span>
-                </label>
-              </div>
             </div>
           </div>
-          {availableTrials.length > 0 && (
-            <div className="my-2 flex w-full justify-center px-4">
-              <div className="flex w-full max-w-5xl flex-col items-center">
-                <span className="mb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">
-                  Show Trials
-                </span>
-                <div className="flex max-h-32 w-full flex-wrap justify-center gap-2 overflow-y-auto px-2">
-                  {availableTrials.map((trial) => (
-                    <label
-                      key={trial}
-                      className="flex items-center rounded px-2 py-1 text-xs"
-                    >
-                      <input
-                        type="checkbox"
-                        className="checkbox checkbox-primary checkbox-xs mr-1"
-                        checked={
-                          selectedTrials.length === 0 ||
-                          selectedTrials.includes(trial)
-                        }
-                        onChange={(e) => {
-                          setSelectedTrials((prev) => {
-                            if (!prev.length) {
-                              return availableTrials.filter((t) => t !== trial);
-                            } else {
-                              return availableTrials.filter((t) => {
-                                if (prev.includes(t) && t !== trial) {
-                                  return true;
-                                } else if (!prev.includes(t) && t === trial) {
-                                  return true;
-                                } else {
-                                  return false;
-                                }
-                              });
-                            }
-                          });
-                        }}
-                      />
-                      <span>{trial}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </>

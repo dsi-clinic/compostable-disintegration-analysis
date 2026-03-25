@@ -6,7 +6,7 @@ export const bucketName = "cftp_data";
 
 export const getFileNames = (useTestData = false) => {
   return {
-    trialsFilename: `all_trials_processed${process.env.DATA_VERSION_ID || ""}${
+    trialsFilename: `disintegration_data_all${process.env.DATA_VERSION_ID || ""}${
       useTestData ? "_test" : ""
     }.csv`,
     operatingConditionsFilename: `operating_conditions_avg${
@@ -29,12 +29,12 @@ export const getLocalPaths = (useTestData = false) => {
     operatingConditionsPath: path.join(
       process.cwd(),
       "data",
-      operatingConditionsFilename
+      operatingConditionsFilename,
     ),
     operatingConditionsFullPath: path.join(
       process.cwd(),
       "data",
-      operatingConditionsFullFilename
+      operatingConditionsFullFilename,
     ),
   };
 };
@@ -50,7 +50,7 @@ export const loadData = async (useTestData = false) => {
     trialData = await fetchLocalData(trialDataPath);
     operatingConditions = await fetchLocalData(operatingConditionsPath);
     operatingConditionsFull = await fetchLocalData(
-      getLocalPaths(useTestData).operatingConditionsFullPath
+      getLocalPaths(useTestData).operatingConditionsFullPath,
     );
   } else if (dataSource === "google") {
     const { trialsFilename, operatingConditionsFilename } =
@@ -58,11 +58,11 @@ export const loadData = async (useTestData = false) => {
     trialData = await fetchCloudData(trialsFilename, bucketName);
     operatingConditions = await fetchCloudData(
       operatingConditionsFilename,
-      bucketName
+      bucketName,
     );
     operatingConditionsFull = await fetchCloudData(
       getFileNames(useTestData).operatingConditionsFullFilename,
-      bucketName
+      bucketName,
     );
   } else {
     throw new Error("Invalid data source specified");

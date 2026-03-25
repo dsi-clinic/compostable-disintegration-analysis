@@ -104,11 +104,11 @@ If you rerun the pipeline, you need to update data files in Google Cloud Storage
 
 #### Google Cloud Storage
 The dashboard pulls data from Google Cloud Storage via an API. Upload the following files to the root of the ```cftp_data``` storage bucket in the ```compostable``` project in the DSI account:
-- ```all_trials_processed.csv```
+- ```disintegration_data_all.csv.csv```
 - ```operating_conditions_avg.csv```
 - ```operating_conditions_full.csv```
 
-The `/test` page will show a preview of the files in the Google Cloud Storage bucket with the suffix `_test` (eg. `all_trials_processed_test.csv`)
+The `/test` page will show a preview of the files in the Google Cloud Storage bucket with the suffix `_test` (eg. `disintegration_data_all_test.csv`)
 
 ### Dashboard Structure
 
