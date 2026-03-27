@@ -258,7 +258,7 @@ export const prepareData = async (searchParams, useTestData = false) => {
 
   const materialClassIOrder = [
     "Fiber",
-    "Biopolymer",
+    "Compostable Polymer",
     "Mixed Materials",
     "Positive Control",
   ];
