@@ -6,23 +6,23 @@ export function invertDictionary(dict) {
 
 export const moistureFilterDict = {
   "<40%": [-Infinity, 0.4, false],
-  "≥40 - <45%": [0.4, 0.45, "inclusive_min_exclusive_max"],
-  "≥45 - <50%": [0.45, 0.5, "inclusive_min_exclusive_max"],
-  "≥50 - <55%": [0.5, 0.55, "inclusive_min_exclusive_max"],
-  "≥55 - <60%": [0.55, 0.6, "inclusive_min_exclusive_max"],
-  "≥60%": [0.6, Infinity, "inclusive_min_exclusive_max"],
+  "40-44.9%": [0.4, 0.45, "inclusive_min_exclusive_max"],
+  "45-49.9%": [0.45, 0.5, "inclusive_min_exclusive_max"],
+  "50-54.9%": [0.5, 0.55, "inclusive_min_exclusive_max"],
+  "55-59.9%": [0.55, 0.6, "inclusive_min_exclusive_max"],
+  ">60%": [0.6, Infinity, "inclusive_min_exclusive_max"],
 };
 
 export const temperatureFilterDict = {
   "<130F": [-Infinity, 130, false],
-  "≥130 - <135F": [130, 135, "inclusive_min_exclusive_max"],
-  "≥135 - <140F": [135, 140, "inclusive_min_exclusive_max"],
-  "≥140 - <145F": [140, 145, "inclusive_min_exclusive_max"],
-  "≥145 - <150F": [145, 150, "inclusive_min_exclusive_max"],
-  "≥150 - <155F": [150, 155, "inclusive_min_exclusive_max"],
-  "≥155 - <160F": [155, 160, "inclusive_min_exclusive_max"],
-  "≥160 - <165F": [160, 165, "inclusive_min_exclusive_max"],
-  "≥165F": [165, Infinity, "inclusive_min_exclusive_max"],
+  "130-134.9F": [130, 135, "inclusive_min_exclusive_max"],
+  "135-139.9F": [135, 140, "inclusive_min_exclusive_max"],
+  "140-144.9F": [140, 145, "inclusive_min_exclusive_max"],
+  "145-149.9F": [145, 150, "inclusive_min_exclusive_max"],
+  "150-154.9F": [150, 155, "inclusive_min_exclusive_max"],
+  "155-159.9F": [155, 160, "inclusive_min_exclusive_max"],
+  "160-164.9F": [160, 165, "inclusive_min_exclusive_max"],
+  "165F": [165, Infinity, "inclusive_min_exclusive_max"],
 };
 
 export const trialDurationDict = {
