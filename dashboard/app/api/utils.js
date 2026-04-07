@@ -34,6 +34,9 @@ const getFilteredTrialIDs = (data, column, low, high, inclusive) => {
   return data
     .filter((trial) => {
       const value = parseFloat(trial[column]);
+      if (inclusive === "inclusive_min_exclusive_max") {
+        return value >= low && value < high;
+      }
       if (inclusive) {
         return value >= low && value <= high;
       }
