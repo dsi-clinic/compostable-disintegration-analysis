@@ -93,6 +93,62 @@ const getIntersectingTrialIDs = (...sets) => {
   return new Set(intersection);
 };
 
+const toOrderMap = (arr) => new Map(arr.map((v, i) => [v, i]));
+
+const materialClassIOrderMap = toOrderMap([
+  "Fiber",
+  "Compostable Polymer",
+  "Mixed Materials",
+  "Positive Control",
+]);
+
+const materialClassIIOrderMap = toOrderMap([
+  "Lined Fiber",
+  "Unlined Fiber",
+  "Rigid Compostable Polymer (< 0.75mm)",
+  "Rigid Compostable Polymer (> 0.75mm)",
+  "Compostable Polymer Film/Bag",
+  "Positive Control - Food Scraps",
+  "Positive Control - Fiber",
+  "Positive Control - Film",
+]);
+
+const materialClassIIIOrderMap = toOrderMap([
+  "PLA-lined Paper",
+  "PLA-lined Bagasse",
+  "PLA-lined Mixed Fiber",
+  "PLA-lined Bamboo Paper",
+  "Agave",
+  "Paper",
+  "Bagasse",
+  "Mixed Fiber",
+  "PLA",
+  "CPLA",
+  "PBAT",
+  "PHA",
+  "Mixed Compostable Polymer",
+  "PBAT & Other Materials",
+  "Cellulose",
+  "Positive Control - Food Scraps",
+  "Positive Control - Unlined Paper",
+  "Kraft Paper",
+  "Positive Control - Cellulose Film",
+]);
+
+const ordinalOrders = {
+  "Material Class II": materialClassIIOrderMap,
+  "Material Class III": materialClassIIIOrderMap,
+};
+
+const ordinalSort = (orderMap, a, b) => {
+  const aIdx = orderMap.get(a);
+  const bIdx = orderMap.get(b);
+  if (aIdx !== undefined && bIdx !== undefined) return aIdx - bIdx;
+  if (aIdx !== undefined) return -1;
+  if (bIdx !== undefined) return 1;
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+};
+
 export const prepareData = async (searchParams, useTestData = false) => {
   // Display params
   const aggCol = searchParams.get("aggcol") || "Material Class I";
@@ -259,19 +315,25 @@ export const prepareData = async (searchParams, useTestData = false) => {
     };
   });
 
-  const materialClassIOrder = [
-    "Fiber",
-    "Compostable Polymer",
-    "Mixed Materials",
-    "Positive Control",
-  ];
-
-  sortedGrouped.sort((a, b) => {
-    return (
-      materialClassIOrder.indexOf(a["Material Class I"]) -
-      materialClassIOrder.indexOf(b["Material Class I"])
+  const orderMap = ordinalOrders[aggCol];
+  if (orderMap) {
+    sortedGrouped.sort((a, b) => ordinalSort(orderMap, a.aggCol, b.aggCol));
+  } else if (aggCol === "Item Format") {
+    sortedGrouped.sort((a, b) =>
+      a.aggCol.localeCompare(b.aggCol, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }),
     );
-  });
+  } else {
+    sortedGrouped.sort((a, b) =>
+      ordinalSort(
+        materialClassIOrderMap,
+        a["Material Class I"],
+        b["Material Class I"],
+      ),
+    );
+  }
 
   // console.log("sortedGrouped", sortedGrouped);
 
@@ -285,21 +347,23 @@ export const getUniqueValues = async (columns, useTestData = false) => {
   let { trialData: data } = await loadData(useTestData);
   const uniqueValues = {};
   columns.forEach((column) => {
-    uniqueValues[column] = [...new Set(data.map((item) => item[column]))].sort(
-      (a, b) => {
-        // Sort such that positive controls are always last
+    const values = [...new Set(data.map((item) => item[column]))];
+    const orderMap = ordinalOrders[column];
+    if (orderMap) {
+      values.sort((a, b) => ordinalSort(orderMap, a, b));
+    } else {
+      values.sort((a, b) => {
         const aStartsWithPos = a.startsWith("Pos");
         const bStartsWithPos = b.startsWith("Pos");
-
         if (aStartsWithPos && !bStartsWithPos) return 1;
         if (bStartsWithPos && !aStartsWithPos) return -1;
-
         return a.localeCompare(b, undefined, {
           numeric: true,
           sensitivity: "base",
         });
-      },
-    );
+      });
+    }
+    uniqueValues[column] = values;
   });
   return uniqueValues;
 };
