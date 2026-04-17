@@ -10,6 +10,7 @@ ipykernel~=6.16
 # project packages
 pandas~=2.1
 openpyxl
+pyyaml
 streamlit
 numpy
 matplotlib
