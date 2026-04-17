@@ -222,11 +222,6 @@ class NewTemplatePipeline(AbstractDataPipeline):
             "% Residuals (Area)",
         ]
         data[percentage_cols] = data[percentage_cols].replace("no data", np.nan)
-        # TODO: Depending data actually comes in, maybe we don't want to do it this way?
-        data[percentage_cols] = (
-            data[percentage_cols].replace("%", "", regex=True).astype(float)
-            / 100
-        )
 
         # Prefer dry weight to wet weight if available
         data["% Residuals (Mass)"] = data["% Residuals (Dry Weight)"].fillna(
