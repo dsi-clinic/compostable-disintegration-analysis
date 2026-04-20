@@ -50,7 +50,7 @@ TRIAL_TO_ID_MAP = {
 OUTLIER_THRESHOLD = 10
 
 DATA_SHEET_PATHS = {
-    "ITEMS_PATH": DATA_DIR / "CFTP-TestItemInventory-Jan-2025.xlsx",
+    "ITEMS_PATH": DATA_DIR / "CFTP_TestItemInventory.xlsx",
     "EXTRA_ITEMS_PATH": DATA_DIR / "Item IDS for CASP004 CASP003.xlsx",
     "TRIALS_PATH": DATA_DIR / "CFTP_TrialDetails.xlsx",
     "OPERATING_CONDITIONS_PATH": DATA_DIR

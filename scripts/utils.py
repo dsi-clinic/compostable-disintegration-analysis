@@ -96,7 +96,7 @@ class DefaultDataFrames:
     def load_items_df(self):
         df_items = pd.read_excel(
             DATA_SHEET_PATHS.get("ITEMS_PATH"),
-            sheet_name="Item Inventory",
+            sheet_name="ItemInventory",
             skiprows=3,
         )
         df_items["Start Weight"] = df_items["Average Initial Weight, g"]
