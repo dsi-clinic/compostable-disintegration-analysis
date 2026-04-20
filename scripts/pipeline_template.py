@@ -333,7 +333,16 @@ class CASP004Pipeline(AbstractDataPipeline):
         )
         data["Trial ID"] = "CASP004-01"
         if data["Item ID"].isna().sum() > 0:
-            raise ValueError("There are null items after mapping")
+            unmapped = (
+                data.loc[data["Item ID"].isna(), "Item Description Refined (Trial)"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
+            raise ValueError(
+                f"There are null items after mapping in {self.trial_name}. "
+                f"Unmapped descriptions ({len(unmapped)}): {unmapped}"
+            )
 
         return data
 
@@ -509,7 +518,16 @@ class PDFPipeline(AbstractDataPipeline):
         drop_cols = ["Item Description From Trial"]
         data = data.drop(drop_cols, axis=1)
         if data["Item ID"].isna().sum() > 0:
-            raise ValueError("There are null items after mapping")
+            unmapped = (
+                data.loc[data["Item ID"].isna(), "Item Description Refined (Trial)"]
+                .dropna()
+                .unique()
+                .tolist()
+            )
+            raise ValueError(
+                f"There are null items after mapping in {self.trial_name}. "
+                f"Unmapped descriptions ({len(unmapped)}): {unmapped}"
+            )
         return self.items.merge(data, on="Item ID")
 
     def calculate_results(self, data: pd.DataFrame) -> pd.DataFrame:
