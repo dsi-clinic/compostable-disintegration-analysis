@@ -44,6 +44,13 @@ TRIAL_TO_ID_MAP = {
     "Facility 8": "ASP001-01",
     "Facility 9": "EASP003-01",
     "Facility 10": "WR005-01",
+    "WR010-01": "WR010-01",
+    "WR008-01": "WR008-01",
+    "WR007-01": "WR007-01",
+    "CASP003-01": "CASP003-01",
+    "CASP007-01": "CASP007-01",
+    "CASP009-01": "CASP009-01",
+    "CASP010-01": "CASP010-01",
 }
 
 
