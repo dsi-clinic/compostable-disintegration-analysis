@@ -99,7 +99,11 @@ def main(suffix: str = ""):
 
     # Filtering for only final timepoints
     # TODO: incorporate midpoint timepoints
-    all_trials = all_trials[all_trials["Timepoint"] == "Final"]
+    all_trials['Timepoint'] = all_trials['Timepoint'].replace("Endpoint", "Final")
+    all_trials = all_trials[(
+        all_trials["Timepoint"] == "Final"
+    )]
+
 
     # CFTP as of 2025 is excluding AD data from the dashboard, may include in future
     all_trials = all_trials[
