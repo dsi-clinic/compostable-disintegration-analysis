@@ -200,6 +200,9 @@ class NewTemplatePipeline(AbstractDataPipeline):
         # If an empty row is found, drop all rows below it
         if pd.notna(first_empty_row_index):
             data = data[:first_empty_row_index]
+
+        data['Removal Period'] = data['Removal Period'].replace("Endpoint", "Final")
+        data = data[data['Removal Period'] == 'Final']
         return data
 
     def preprocess_data(self, data):
