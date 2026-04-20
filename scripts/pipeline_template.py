@@ -239,9 +239,7 @@ class NewTemplatePipeline(AbstractDataPipeline):
         Returns:
             The joined data
         """
-        return self.items.drop_duplicates(subset="Item Name").merge(
-            data, on="Item Name"
-        )
+        return self.items.merge(data, on="Item ID")
 
 
 class CASP004Pipeline(AbstractDataPipeline):
