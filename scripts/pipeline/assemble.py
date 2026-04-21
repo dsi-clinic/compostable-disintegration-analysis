@@ -1,3 +1,5 @@
+"""Join disintegration rows with item and trial context and apply filters."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -12,6 +14,13 @@ def assemble_disintegration(
     filters: Filters,
     output_columns: list[str],
 ) -> pd.DataFrame:
+    """Merge the three transformed tables and apply row-level filters.
+
+    Inner-joins ``disintegration`` to ``items`` on ``Item ID`` and to
+    ``trials`` on ``Trial ID``, then drops rows matching any of the
+    :class:`Filters` exclusions. Missing output columns are materialized as
+    NA so the result always conforms to ``output_columns`` in that order.
+    """
     df = disintegration.merge(items, on="Item ID", how="inner")
     df = df.merge(
         trials[["Trial ID", "Test Method", "Technology"]],

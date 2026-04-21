@@ -1,3 +1,5 @@
+"""Pre-run validation of the input workbook against the pipeline config."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -11,25 +13,36 @@ CONDITIONS_META_COLS = ("Operating Condition", "Time Unit", "Time Step")
 
 
 class ValidationError(Exception):
-    pass
+    """Raised when input validation produces any blocking errors."""
 
 
 @dataclass
 class ValidationReport:
+    """Accumulator for validation errors (blocking) and warnings (informational)."""
+
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
     def error(self, msg: str) -> None:
+        """Record a blocking error message."""
         self.errors.append(msg)
 
     def warn(self, msg: str) -> None:
+        """Record a non-blocking warning message."""
         self.warnings.append(msg)
 
     def ok(self) -> bool:
+        """Return True when there are no blocking errors."""
         return not self.errors
 
 
 def validate_input(xl: pd.ExcelFile, config: PipelineConfig) -> ValidationReport:
+    """Check that ``xl`` has the sheets, columns, and foreign keys ``config`` expects.
+
+    Returns a :class:`ValidationReport`. Missing required columns or sheets
+    are errors; operating-condition columns with unknown Trial IDs are
+    warnings (they will be dropped at assembly time).
+    """
     report = ValidationReport()
 
     available = set(xl.sheet_names)
@@ -91,6 +104,7 @@ def _check_columns(
     required: list[str],
     report: ValidationReport,
 ) -> None:
+    """Record an error in ``report`` for each required column missing from ``sheet``."""
     df = read_sheet(xl, sheet)
     present = set(df.columns)
     for col in required:
@@ -105,6 +119,10 @@ def _check_foreign_key(
     target: str,
     report: ValidationReport,
 ) -> None:
+    """Warn if values in ``df[col]`` are not present in ``valid``.
+
+    ``target`` names the referenced sheet and is used only in the warning text.
+    """
     values = set(df[col].dropna().astype(str))
     missing = values - valid
     if missing:
@@ -116,6 +134,7 @@ def _check_foreign_key(
 
 
 def format_report(report: ValidationReport) -> str:
+    """Render ``report`` as a multi-line human-readable string."""
     lines: list[str] = []
     if report.warnings:
         lines.append("Warnings:")

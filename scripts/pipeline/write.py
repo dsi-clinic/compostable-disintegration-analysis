@@ -1,3 +1,5 @@
+"""Write the three pipeline outputs to the primary and dashboard directories."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,6 +16,11 @@ def write_outputs(
     outputs: OutputSpec,
     suffix: str = "",
 ) -> list[Path]:
+    """Write all three CSVs to both output directories and return the paths.
+
+    ``suffix`` is appended to each output filename stem (before the
+    extension) — useful for generating side-by-side test outputs.
+    """
     written: list[Path] = []
     for out_dir in (outputs.primary_dir, outputs.dashboard_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -29,6 +36,7 @@ def _write(
     filename: str,
     suffix: str,
 ) -> Path:
+    """Write ``df`` to ``out_dir/filename`` as CSV, inserting ``suffix`` before ``.ext``."""
     stem, _, ext = filename.rpartition(".")
     name = f"{stem}{suffix}.{ext}" if suffix else filename
     path = out_dir / name

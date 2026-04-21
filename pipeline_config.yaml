@@ -14,6 +14,10 @@ outputs:
     operating_conditions_avg: operating_conditions_avg.csv
     operating_conditions_full: operating_conditions_full.csv
 
+# Each sheet lists its required Excel columns (pre-rename, as they appear in
+# the workbook), any renames to apply, the ID columns to dropna/str-cast, and
+# optionally a column to deduplicate on. ``id_columns`` and ``dedupe_on`` use
+# post-rename names.
 sheets:
   trials:
     name: TrialDetails
@@ -25,6 +29,12 @@ sheets:
       - Midpoint Duration
       - Final Duration
       - Annual Tonnage (tpy)
+    rename:
+      Public Trial ID: Trial ID
+      Display Compost Technology: Technology
+      Final Duration: Trial Duration
+    id_columns: [Trial ID]
+    dedupe_on: Trial ID
 
   items:
     name: ItemInventory
@@ -36,6 +46,13 @@ sheets:
       - Material Class I
       - Material Class II
       - Material Class III
+    optional_columns:
+      - Item Description Refined
+    rename:
+      Item Type: Item Format
+      Brand for Display: Item Brand
+    id_columns: [Item ID]
+    dedupe_on: Item ID
 
   disintegration:
     name: DisintegrationData
@@ -47,6 +64,10 @@ sheets:
       - "% Residuals (Dry Weight)"
       - "% Residuals (Area)"
       - "Weights taken: wet only, dry only, or both?"
+    rename:
+      Public Trial ID: Trial ID
+      Removal Period: Timepoint
+    id_columns: [Trial ID, Item ID]
 
 # Operating-conditions sheets.
 # Every sheet is expected to have columns A="Operating Condition", B="Time Unit",

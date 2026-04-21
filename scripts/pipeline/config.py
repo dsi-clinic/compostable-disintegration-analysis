@@ -1,3 +1,5 @@
+"""Typed configuration model for the pipeline and the YAML loader."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -9,12 +11,31 @@ import yaml
 
 @dataclass(frozen=True)
 class SheetSpec:
+    """One input worksheet and how to reshape it into a pipeline table.
+
+    ``required_columns`` are the Excel-native column names that must be
+    present; validation fails if any are missing. ``optional_columns`` are
+    carried through when present and filled with NA when absent.
+
+    ``rename`` maps Excel-native names to the post-transform names the
+    pipeline (and the dashboard) use downstream. ``id_columns`` and
+    ``dedupe_on`` use post-rename names: every ``id_columns`` column is
+    dropna'd and str-cast; ``dedupe_on`` (if set) selects the column used
+    for row deduplication.
+    """
+
     name: str
     required_columns: list[str] = field(default_factory=list)
+    optional_columns: list[str] = field(default_factory=list)
+    rename: dict[str, str] = field(default_factory=dict)
+    id_columns: list[str] = field(default_factory=list)
+    dedupe_on: str | None = None
 
 
 @dataclass(frozen=True)
 class ConditionSpec:
+    """One operating-condition sheet (e.g. temperature, moisture)."""
+
     sheet: str
     condition: str
     include_in_avg: bool = False
@@ -24,6 +45,8 @@ class ConditionSpec:
 
 @dataclass(frozen=True)
 class Filters:
+    """Row-level filters applied while assembling the disintegration table."""
+
     exclude_material_class_ii: list[str]
     exclude_item_names: list[str]
     outlier_mass_residual_max: float
@@ -33,6 +56,8 @@ class Filters:
 
 @dataclass(frozen=True)
 class OutputSpec:
+    """Destination directories and filenames for the three CSV outputs."""
+
     primary_dir: Path
     dashboard_dir: Path
     disintegration: str
@@ -42,6 +67,8 @@ class OutputSpec:
 
 @dataclass(frozen=True)
 class PipelineConfig:
+    """Fully resolved pipeline configuration."""
+
     input_file: Path
     outputs: OutputSpec
     trials: SheetSpec
@@ -53,12 +80,17 @@ class PipelineConfig:
 
     @property
     def all_sheet_names(self) -> list[str]:
+        """Every worksheet name the pipeline expects to read."""
         names = [self.trials.name, self.items.name, self.disintegration.name]
         names.extend(c.sheet for c in self.operating_conditions)
         return names
 
 
 def load_config(config_path: Path, repo_root: Path) -> PipelineConfig:
+    """Parse a pipeline YAML file into a :class:`PipelineConfig`.
+
+    Paths in the YAML are resolved relative to ``repo_root``.
+    """
     with config_path.open("r") as f:
         raw: dict[str, Any] = yaml.safe_load(f)
 
@@ -73,12 +105,9 @@ def load_config(config_path: Path, repo_root: Path) -> PipelineConfig:
     )
 
     sheets = raw["sheets"]
-    trials = SheetSpec(sheets["trials"]["name"], sheets["trials"]["required_columns"])
-    items = SheetSpec(sheets["items"]["name"], sheets["items"]["required_columns"])
-    disintegration = SheetSpec(
-        sheets["disintegration"]["name"],
-        sheets["disintegration"]["required_columns"],
-    )
+    trials = _sheet_spec(sheets["trials"])
+    items = _sheet_spec(sheets["items"])
+    disintegration = _sheet_spec(sheets["disintegration"])
 
     conditions = [ConditionSpec(**c) for c in raw["operating_conditions"]]
 
@@ -93,4 +122,15 @@ def load_config(config_path: Path, repo_root: Path) -> PipelineConfig:
         operating_conditions=conditions,
         filters=filters,
         output_columns=raw["output_columns"],
+    )
+
+
+def _sheet_spec(raw: dict[str, Any]) -> SheetSpec:
+    return SheetSpec(
+        name=raw["name"],
+        required_columns=raw.get("required_columns", []),
+        optional_columns=raw.get("optional_columns", []),
+        rename=raw.get("rename", {}),
+        id_columns=raw.get("id_columns", []),
+        dedupe_on=raw.get("dedupe_on"),
     )

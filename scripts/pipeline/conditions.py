@@ -1,3 +1,5 @@
+"""Build the full and per-trial-average operating-conditions output tables."""
+
 from __future__ import annotations
 
 import pandas as pd

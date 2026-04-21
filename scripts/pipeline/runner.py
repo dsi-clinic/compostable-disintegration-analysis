@@ -1,3 +1,6 @@
+"""Pipeline orchestrator: reads the workbook, transforms each sheet, assembles
+the final tables, and writes the CSV outputs."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -5,12 +8,18 @@ from pathlib import Path
 
 import pandas as pd
 
-from . import assemble, conditions, disintegration, items, load, trials, validate, write
+from . import assemble, conditions, load, transforms, validate, write
 from .config import PipelineConfig
 
 
 @dataclass
 class RunResult:
+    """Outputs of a successful pipeline run.
+
+    ``dropped_condition_cols`` lists operating-condition columns that were
+    dropped because their header did not match a known Trial ID.
+    """
+
     disintegration: pd.DataFrame
     avg: pd.DataFrame
     full: pd.DataFrame
@@ -25,6 +34,15 @@ def run(
     validate_only: bool = False,
     verbose: bool = False,
 ) -> RunResult | None:
+    """Execute the pipeline end-to-end.
+
+    Validates the input workbook, transforms the trials/items/disintegration
+    sheets, assembles filtered disintegration rows, builds the full and
+    per-trial-average operating-conditions tables, and writes CSVs. Returns
+    ``None`` when ``validate_only`` is true. Raises
+    :class:`validate.ValidationError` if validation fails. ``suffix`` is
+    appended to each output filename stem.
+    """
     xl = load.open_workbook(config.input_file)
     _v(verbose, f"Opened {config.input_file} ({len(xl.sheet_names)} sheets)")
 
@@ -38,10 +56,14 @@ def run(
     if validate_only:
         return None
 
-    trials_df = trials.transform_trials(load.read_sheet(xl, config.trials.name))
-    items_df = items.transform_items(load.read_sheet(xl, config.items.name))
-    disint_df = disintegration.transform_disintegration(
-        load.read_sheet(xl, config.disintegration.name)
+    trials_df = transforms.apply_sheet_spec(
+        load.read_sheet(xl, config.trials.name), config.trials
+    )
+    items_df = transforms.transform_items(
+        load.read_sheet(xl, config.items.name), config.items
+    )
+    disint_df = transforms.transform_disintegration(
+        load.read_sheet(xl, config.disintegration.name), config.disintegration
     )
     _v(verbose, f"Loaded trials={len(trials_df)} items={len(items_df)} disintegration={len(disint_df)}")
 
@@ -88,11 +110,13 @@ def run(
 
 
 def _v(verbose: bool, msg: str) -> None:
+    """Print ``msg`` when ``verbose`` is true."""
     if verbose:
         print(msg)
 
 
 def _log_unique(df: pd.DataFrame, col: str) -> None:
+    """Print the sorted unique values of ``col`` if it exists in ``df``."""
     if col not in df.columns:
         return
     uniq = sorted({str(v) for v in df[col].dropna().unique()})
