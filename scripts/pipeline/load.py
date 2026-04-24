@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 import pandas as pd
+
+# The CFTP workbook ships with sheet-level Data Validation (dropdowns, range
+# constraints) that openpyxl drops on read. We don't consume those rules —
+# only the cell values — so the warning is pure noise.
+warnings.filterwarnings(
+    "ignore",
+    message="Data Validation extension is not supported",
+    category=UserWarning,
+    module="openpyxl.*",
+)
 
 
 def open_workbook(input_file: Path) -> pd.ExcelFile:

@@ -1,102 +1,127 @@
 #!/usr/bin/env python3
-"""CFTP disintegration pipeline — single-source entrypoint.
-
-Reads data/CFTP_FullDataSet_Lvl3.xlsx (per pipeline_config.yaml), validates the
-input, transforms each domain table, and writes three CSVs to the primary and
-dashboard data directories.
-"""
+"""CFTP disintegration pipeline — single-source entrypoint."""
 from __future__ import annotations
 
-import argparse
 import sys
 import traceback
+from dataclasses import replace
 from pathlib import Path
 
+import click
+from pipeline import load_config, run
+from pipeline.config import PipelineConfig
+from pipeline.validate import ValidationError
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT / "scripts") not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT / "scripts"))
-
-from pipeline import load_config, run  # noqa: E402
-from pipeline.validate import ValidationError  # noqa: E402
-
 DEFAULT_CONFIG = REPO_ROOT / "pipeline_config.yaml"
 
-
-def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--config", type=Path, default=DEFAULT_CONFIG,
-                   help="Path to pipeline_config.yaml (default: repo root).")
-    p.add_argument("--input", type=Path, default=None,
-                   help="Override input_file from config.")
-    p.add_argument("--output-dir", type=Path, default=None,
-                   help="Override primary output directory from config.")
-    p.add_argument("--dashboard-dir", type=Path, default=None,
-                   help="Override dashboard output directory from config.")
-    p.add_argument("--suffix", default="",
-                   help="Optional suffix appended to output filenames (e.g. _test).")
-    p.add_argument("--validate-only", action="store_true",
-                   help="Run input validation and exit without writing outputs.")
-    p.add_argument("--verbose", "-v", action="store_true",
-                   help="Log per-stage row counts and distinct categorical values.")
-    return p
+PathArg = click.Path(dir_okay=False, path_type=Path)
+DirArg = click.Path(file_okay=False, path_type=Path)
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.option(
+    "--config", "config_path", type=PathArg,
+    default=DEFAULT_CONFIG, show_default=True,
+    help="Path to pipeline_config.yaml.",
+)
+@click.option(
+    "--input", "input_path", type=PathArg, default=None,
+    help="Override input_file from config.",
+)
+@click.option(
+    "--output-dir", type=DirArg, default=None,
+    help="Override primary output directory from config.",
+)
+@click.option(
+    "--dashboard-dir", type=DirArg, default=None,
+    help="Override dashboard output directory from config.",
+)
+@click.option(
+    "--suffix", default="",
+    help="Suffix appended to output filenames (e.g. _test).",
+)
+@click.option(
+    "--validate-only", is_flag=True,
+    help="Run input validation and exit without writing outputs.",
+)
+@click.option(
+    "--verbose", "-v", is_flag=True,
+    help="Log per-stage row counts and distinct categorical values.",
+)
+def main(
+    config_path: Path,
+    input_path: Path | None,
+    output_dir: Path | None,
+    dashboard_dir: Path | None,
+    suffix: str,
+    validate_only: bool,
+    verbose: bool,
+) -> None:
+    """Run the CFTP disintegration pipeline against the configured workbook.
 
+    Validates the input, transforms each domain table, and writes three CSVs
+    to the primary and dashboard output directories declared in
+    pipeline_config.yaml.
+    """
     try:
-        config = load_config(args.config, REPO_ROOT)
+        config = load_config(config_path.expanduser(), REPO_ROOT)
     except FileNotFoundError as exc:
-        print(f"Config file not found: {exc}", file=sys.stderr)
-        return 1
-    except Exception as exc:  # noqa: BLE001
-        print(f"Failed to load config: {exc}", file=sys.stderr)
-        if args.verbose:
+        raise click.ClickException(f"Config file not found: {exc}") from exc
+    except Exception as exc:  # noqa: BLE001 — CLI boundary
+        if verbose:
             traceback.print_exc()
-        return 2
+        raise click.ClickException(f"Failed to load config: {exc}") from exc
 
-    config = _apply_overrides(config, args)
+    config = _apply_overrides(config, input_path, output_dir, dashboard_dir)
 
     try:
-        run(
-            config,
-            suffix=args.suffix,
-            validate_only=args.validate_only,
-            verbose=args.verbose,
-        )
+        run(config, suffix=suffix, validate_only=validate_only, verbose=verbose)
     except ValidationError as exc:
-        print("Validation failed:", file=sys.stderr)
-        print(str(exc), file=sys.stderr)
-        return 1
+        raise click.ClickException(f"Validation failed:\n{exc}") from exc
     except FileNotFoundError as exc:
-        print(str(exc), file=sys.stderr)
-        return 1
-    except Exception as exc:  # noqa: BLE001
-        print(f"Pipeline failed: {exc}", file=sys.stderr)
-        if args.verbose:
+        raise click.ClickException(str(exc)) from exc
+    except KeyboardInterrupt:
+        click.echo("Interrupted.", err=True)
+        sys.exit(130)
+    except Exception as exc:  # noqa: BLE001 — CLI boundary; map to exit 2
+        click.echo(f"Pipeline failed: {exc}", err=True)
+        if verbose:
             traceback.print_exc()
-        return 2
+        sys.exit(2)
 
-    if args.validate_only:
-        print("Validation-only run complete. No outputs written.")
-    else:
-        print("Pipeline complete.")
-    return 0
+    click.echo(
+        "Validation-only run complete. No outputs written."
+        if validate_only
+        else "Pipeline complete."
+    )
 
 
-def _apply_overrides(config, args):
-    from dataclasses import replace
-
-    outputs = config.outputs
-    if args.output_dir is not None or args.dashboard_dir is not None:
-        outputs = replace(
-            outputs,
-            primary_dir=(args.output_dir or outputs.primary_dir).resolve(),
-            dashboard_dir=(args.dashboard_dir or outputs.dashboard_dir).resolve(),
-        )
-    input_file = args.input.resolve() if args.input else config.input_file
+def _apply_overrides(
+    config: PipelineConfig,
+    input_path: Path | None,
+    output_dir: Path | None,
+    dashboard_dir: Path | None,
+) -> PipelineConfig:
+    """Apply CLI path overrides on top of a loaded config."""
+    outputs = replace(
+        config.outputs,
+        primary_dir=(
+            output_dir.expanduser().resolve()
+            if output_dir
+            else config.outputs.primary_dir
+        ),
+        dashboard_dir=(
+            dashboard_dir.expanduser().resolve()
+            if dashboard_dir
+            else config.outputs.dashboard_dir
+        ),
+    )
+    input_file = (
+        input_path.expanduser().resolve() if input_path else config.input_file
+    )
     return replace(config, input_file=input_file, outputs=outputs)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

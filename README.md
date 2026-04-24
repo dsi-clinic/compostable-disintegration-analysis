@@ -1,5 +1,3 @@
-claude --resume "consolidate-multi-pipeline-single-source"
-
 # Compostable Disintegration Analysis
 
 ## Project Background

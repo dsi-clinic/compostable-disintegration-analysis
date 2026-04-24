@@ -11,6 +11,7 @@ ipykernel~=6.16
 pandas~=2.1
 openpyxl
 pyyaml
+click~=8.1
 streamlit
 numpy
 matplotlib
