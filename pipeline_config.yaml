@@ -1,0 +1,129 @@
+# CFTP Disintegration Pipeline Configuration
+#
+# Single source of truth for the data contract with CFTP_FullDataSet_Lvl3.xlsx.
+# Every sheet name and required column listed here is asserted by the validation
+# stage before any transform runs. To adapt to upstream renames, edit this file.
+
+input_file: data/CFTP_FullDataSet_Lvl3.xlsx
+
+outputs:
+  primary_dir: data
+  dashboard_dir: dashboard/data
+  filenames:
+    disintegration: disintegration_data_all.csv
+    operating_conditions_avg: operating_conditions_avg.csv
+    operating_conditions_full: operating_conditions_full.csv
+
+# Each sheet lists its required Excel columns (pre-rename, as they appear in
+# the workbook), any renames to apply, the ID columns to dropna/str-cast, and
+# optionally a column to deduplicate on. ``id_columns`` and ``dedupe_on`` use
+# post-rename names.
+sheets:
+  trials:
+    name: TrialDetails
+    required_columns:
+      - Public Trial ID
+      - Test Method
+      - Detailed Compost Technology
+      - Display Compost Technology
+      - Midpoint Duration
+      - Final Duration
+      - Annual Tonnage (tpy)
+    rename:
+      Public Trial ID: Trial ID
+      Display Compost Technology: Technology
+      Final Duration: Trial Duration
+    id_columns: [Trial ID]
+    dedupe_on: Trial ID
+
+  items:
+    name: ItemInventory
+    required_columns:
+      - Item ID
+      - Item Type
+      - Brand for Display
+      - Item Name
+      - Material Class I
+      - Material Class II
+      - Material Class III
+    optional_columns:
+      - Item Description Refined
+    rename:
+      Item Type: Item Format
+      Brand for Display: Item Brand
+    id_columns: [Item ID]
+    dedupe_on: Item ID
+
+  disintegration:
+    name: DisintegrationData
+    required_columns:
+      - Public Trial ID
+      - Item ID
+      - Removal Period
+      - "% Residuals (Wet Weight)"
+      - "% Residuals (Dry Weight)"
+      - "% Residuals (Area)"
+      - "Weights taken: wet only, dry only, or both?"
+    rename:
+      Public Trial ID: Trial ID
+      Removal Period: Timepoint
+    id_columns: [Trial ID, Item ID]
+
+# Operating-conditions sheets.
+# Every sheet is expected to have columns A="Operating Condition", B="Time Unit",
+# C="Time Step", D+ = one column per Public Trial ID. Those metadata columns are
+# read in-place (not synthesized by the pipeline).
+#
+# `include_in_avg` controls whether a per-trial mean is emitted into
+# operating_conditions_avg.csv. Only Temperature and Moisture are consumed by
+# the dashboard today; the rest flow into operating_conditions_full.csv.
+operating_conditions:
+  - sheet: Temperature, F in field
+    condition: Temperature
+    include_in_avg: true
+    avg_column: Average Temperature (F)
+    avg_window_days: 45
+  - sheet: "% Moisture in field"
+    condition: Moisture
+    include_in_avg: true
+    avg_column: Average % Moisture (In Field)
+  - sheet: O2 in field
+    condition: Oxygen
+  - sheet: BD in field
+    condition: Bulk Density
+  - sheet: CN Lab
+    condition: "C:N"
+  - sheet: pH Lab
+    condition: pH
+
+filters:
+  exclude_material_class_ii:
+    - Mixed Materials
+  exclude_item_names:
+    - Multi-laminate stand-up pounch with zipper
+  outlier_mass_residual_max: 10
+  excluded_technologies:
+    - Anaerobic Digestion
+  # The dashboard currently expects only Final-removal data. The new
+  # DisintegrationData also contains Midpoint rows; filter them out here until
+  # the dashboard exposes a Timepoint selector. Set to null to disable filtering.
+  include_timepoints:
+    - Final
+
+# Final column order for disintegration_data_all.csv. This is the dashboard
+# schema contract — do not reorder or rename without updating the dashboard.
+output_columns:
+  - Trial ID
+  - Test Method
+  - Item ID
+  - Item Format
+  - Item Brand
+  - Item Name
+  - Item Description Refined
+  - Material Class I
+  - Material Class II
+  - Material Class III
+  - "% Residuals (Mass)"
+  - "% Residuals (Area)"
+  - Technology
+  - Timepoint

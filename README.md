@@ -9,28 +9,17 @@ The Compostable Field Testing Program (CFTP) is an international research platfo
 The DSI will be extending a data pipeline to format data from new experiments into a consistent format and creating visualizations showing disintegration rates for different materials and composting methodology. We will also create a process for importing new trial data that CREF's partner facilities will use in future trials, and start building the infrastructure for a public-facing dashboard of data from composting trials.
 
 ## Pipeline
-The data pipeline for this project does the following standardizes data from multiple facilities for display on a dashboard displaying decomposition rates of different compostable materials as well as operating conditions of the associated facilities.
-
-Note: The pipeline was set up to handle multiple disparate files with varied input formats. Future data will come in a standardized format. The pipeline is left as one script for ease of iteration and refactoring later when the new data format is known.
+The data pipeline standardizes CFTP field-trial data into three CSVs that the dashboard consumes: per-item disintegration results, per-trial average operating conditions, and time-series operating conditions. Reads a single consolidated workbook published by CFTP.
 
 ### Quickstart
 
-#### Data Files
-Download the following files from the DSI Google Drive in the [Results Data for DSI - Raw uploads](https://drive.google.com/drive/folders/1B8aRIF1lWDKfeqlDTkG2y1ERZFD-A8JK?usp=sharing) and save them to ```data/```:
+#### Data file
+The pipeline reads one file: `data/CFTP_FullDataSet_Lvl3.xlsx` (from the CFTP `_PRODUCTION DATA SETS (ACTIVE)` Drive folder). Save it to `data/`. No other inputs are required.
 
-- [CFTP-TestItemInventory-Jan-2025.xlsx](https://docs.google.com/spreadsheets/d/1GgRFcWWcPEBfH6N4v15wiB_g4pGz_b9y/edit?gid=1380270313#gid=1380270313)
-- [CFTP-TrialDetails-Oct22-2024.xlsx](https://docs.google.com/spreadsheets/d/1-djc8F_4fdzZOj3tXZSc1vDL0slUK02Q/edit?gid=1192858019#gid=1192858019)
-- [CFTP_DisintegrationDataInput_Oct22-2024-partial.csv](https://drive.google.com/file/d/1QGCmImE8TIyBzD8JpqGo9TCN68k3Efc6/view?usp=drive_link)
-- [CFTP Anonymized Data Compilation Overview - For Sharing](https://docs.google.com/spreadsheets/d/1GsbN9AexDb0j-Hqzz8z3kO4zC5v60ptx)
-- [Donated Data 2023 - Compiled Facility Conditions for DSI](https://docs.google.com/spreadsheets/d/1-UGcOJ3Jy2Oe37hy9m8p2IjeHSTuBqeF)
-- [Donated Data 2023 - Compiled Field Results for DSI](https://docs.google.com/spreadsheets/d/1XwYxdEhrpOxS6_nSf9yARWI-mLswrIBv)
-- [CASP004-01 - Results Pre-Processed for Analysis from PDF Tables](https://docs.google.com/spreadsheets/d/1GfYaqgqx85qq5XM__0D1IfbMomGsLdmQ)
-- [Compiled Field Results - CFTP Gathered Data](https://docs.google.com/spreadsheets/d/1EqRhb09hcXc9SW99vrj5aVUdYHicmUoU)
-- [CFTP Test Item Inventory with Dimensions - All Trials.xlsx'](https://docs.google.com/spreadsheets/d/12deXRBI7_856FIuiu5ZgM_W19llAHD42/edit?usp=drive_link&ouid=102107591581911420296&rtpof=true&sd=true)
-- [old_items.json](https://drive.google.com/file/d/11w1jwuF4Y3ZuBXppYWV11MKiDkXmsvOz/view?usp=sharing)
-- [Item IDS for CASP004 CASP003.xlsx](https://docs.google.com/spreadsheets/d/1U8dds3eiUFNxQNzLYvYay1KxVqd9mpAR)
+The file's tab names, column contracts, and filter rules are declared in [`pipeline_config.yaml`](./pipeline_config.yaml) at the repo root. To adapt to upstream column renames, edit the YAML — no code changes needed.
 
-File paths for these sheets are all configured in ```scripts/constants.py``` and read in `DefaultDataFrames` in ```scripts/utils.py```
+#### Legacy inputs
+The previous multi-file pipeline (CASP004, ClosedLoop, PDFPipeline, etc.) and its source data have been moved to [`_archive/`](./_archive). Refer to git history if you need to compare behavior.
 
 
 #### Docker
@@ -52,15 +41,46 @@ Type `exit` in the terminal where you ran `docker-compose exec pipeline sh` to l
 
 The dashboard will run on your computer, you can view it by going to `http://localhost:3333/` in your web browser.
 #### Running the Pipeline
-To run the pipeline:
+The pipeline validates the input workbook (every sheet and required column declared in `pipeline_config.yaml` must be present), then writes three CSVs to both `data/` and `dashboard/data/`.
 
 ```sh
-python scripts/run-pipeline.py
+# Validate the input file without writing outputs
+python scripts/run-pipeline.py --validate-only --verbose
+
+# Full run
+python scripts/run-pipeline.py --verbose
 ```
 
-Cleaned data files will be output in ```data/```. To update the files displayed on the dashboard, follow the instructions in [Updating the Dashboard Data](#updating-the-dashboard-data)
+CLI flags:
 
-Updated pipeline templates should be added to `scripts/pipeline_templates.py` and added to the main pipeline function in `scripts/run-pipeline.py`
+| Flag | Purpose |
+|---|---|
+| `--config PATH` | Override the default `pipeline_config.yaml`. |
+| `--input PATH` | Override `input_file` from the config. |
+| `--output-dir PATH` | Override the primary output directory. |
+| `--dashboard-dir PATH` | Override the dashboard output directory. |
+| `--suffix STR` | Append a suffix to output filenames (e.g. `_test`). |
+| `--validate-only` | Run validation and exit without writing CSVs. |
+| `--verbose`, `-v` | Print per-stage row counts and distinct categorical values. |
+
+Exit codes: `0` success, `1` validation/input failure, `2` unexpected error.
+
+Outputs:
+- `disintegration_data_all.csv` — joined per-item, per-trial disintegration data.
+- `operating_conditions_avg.csv` — per-trial average temperature, moisture, and trial duration.
+- `operating_conditions_full.csv` — long-form time-series across all operating-conditions sheets.
+
+To update the files displayed on the dashboard, follow the instructions in [Updating the Dashboard Data](#updating-the-dashboard-data).
+
+#### Configuring the pipeline
+`pipeline_config.yaml` declares the contract with the input workbook:
+
+- `input_file` — path to the workbook.
+- `outputs` — output directories and CSV filenames.
+- `sheets` — tab names and required columns for `TrialDetails`, `ItemInventory`, `DisintegrationData`. Validation fails with a list of every missing sheet or column.
+- `operating_conditions` — list of operating-conditions sheets, the `Operating Condition` label to assign, and (for Temperature/Moisture) the `avg_column` name + optional `avg_window_days` for the per-trial average.
+- `filters` — material-class exclusions, item-name exclusions, technology exclusions, outlier mass cutoff, and `include_timepoints` (set to `null` to include Midpoint rows alongside Final).
+- `output_columns` — the exact column order for `disintegration_data_all.csv`. This is the dashboard schema contract; do not change without updating the dashboard.
 
 ## Dashboard
 This is a [Next.js](https://nextjs.org/) project.
