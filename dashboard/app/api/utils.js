@@ -315,25 +315,18 @@ export const prepareData = async (searchParams, useTestData = false) => {
     };
   });
 
-  const orderMap = ordinalOrders[aggCol];
-  if (orderMap) {
-    sortedGrouped.sort((a, b) => ordinalSort(orderMap, a.aggCol, b.aggCol));
-  } else if (aggCol === "Item Format") {
-    sortedGrouped.sort((a, b) =>
-      a.aggCol.localeCompare(b.aggCol, undefined, {
-        numeric: true,
-        sensitivity: "base",
-      }),
+  sortedGrouped.sort((a, b) => {
+    const colorOrder = ordinalSort(
+      materialClassIOrderMap,
+      a["Material Class I"],
+      b["Material Class I"],
     );
-  } else {
-    sortedGrouped.sort((a, b) =>
-      ordinalSort(
-        materialClassIOrderMap,
-        a["Material Class I"],
-        b["Material Class I"],
-      ),
-    );
-  }
+    if (colorOrder !== 0) return colorOrder;
+    return a.aggCol.localeCompare(b.aggCol, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    });
+  });
 
   // console.log("sortedGrouped", sortedGrouped);
 
