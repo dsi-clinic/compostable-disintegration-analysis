@@ -25,7 +25,9 @@ export default function OperatingConditionsDashboard({
   const [yAxisRanges, setYAxisRanges] = useState(DEFAULT_RANGES);
   const plotData = useMemo(() => {
     return _plotData.filter((d) =>
-      selectedTrials?.length ? selectedTrials.includes(d.name) : true,
+      selectedTrials?.length
+        ? selectedTrials.includes(d.name) || d.name === "PFRP"
+        : true,
     );
   }, [_plotData, selectedTrials]);
 
@@ -77,19 +79,20 @@ export default function OperatingConditionsDashboard({
           );
         });
 
-        let timeSteps = filteredData.map((d) => d["Time Step"]);
-        if (selectedMetric !== "Temperature") {
-          timeSteps = timeSteps.map((d) => d * 7); // Convert weeks to days
-        }
+        const isTemperature = selectedMetric === "Temperature";
+        const timeSteps = filteredData.map((d) => d["Time Step"]);
 
-        const maxDaysFromData = Math.max(...timeSteps);
-        const calculatedEffectiveMaxDays = capAt90Days
-          ? Math.min(90, maxDaysFromData)
+        // Day-based caps need to be expressed in the chart's native unit
+        // (days for Temperature, weeks otherwise) so gridlines align with data.
+        const unitsPerDay = isTemperature ? 1 : 1 / 7;
+        const maxFromData = Math.max(...timeSteps);
+        const calculatedEffectiveMax = capAt90Days
+          ? Math.min(90 * unitsPerDay, maxFromData)
           : ignoreMaxDays
-            ? maxDaysFromData + 5
-            : Math.min(maxDays, maxDaysFromData);
+            ? maxFromData + (isTemperature ? 5 : 1)
+            : Math.min(maxDays * unitsPerDay, maxFromData);
 
-        setEffectiveMaxDays(calculatedEffectiveMaxDays); // Update state
+        setEffectiveMaxDays(calculatedEffectiveMax);
 
         const trialColumns = Object.keys(data[0]).filter(
           (column) => !nonTrialColumns.includes(column),
@@ -129,7 +132,7 @@ export default function OperatingConditionsDashboard({
               hovertemplate:
                 selectedMetric === "Temperature"
                   ? "Day %{x}<br>%{y:.2f}<extra>%{fullData.name}</extra>"
-                  : "Day %{x}<br>%{y:.2f}%<extra>%{fullData.name}</extra>",
+                  : "Week %{x}<br>%{y:.2f}%<extra>%{fullData.name}</extra>",
             });
           }
         });
@@ -246,7 +249,7 @@ export default function OperatingConditionsDashboard({
                 },
                 xaxis: {
                   title: {
-                    text: "<b>Days</b>",
+                    text: `<b>${selectedMetric === "Temperature" ? "Days" : "Weeks"}</b>`,
                   },
                   tickangle: xTickAngle,
                   ticklen: 10,
